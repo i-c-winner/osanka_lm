@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 class RoleBase(BaseModel):
-    name: str
+    role: str
     description: Optional[str] = None
 
 
@@ -14,7 +14,7 @@ class RoleCreate(RoleBase):
 
 
 class RoleUpdate(BaseModel):
-    name: Optional[str] = None
+    role: Optional[str] = None
     description: Optional[str] = None
 
 
