@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel
 
 
 class BookingBase(BaseModel):
-    session_id: int
-    user_id: int
+    session_id: UUID
+    user_id: UUID
     status: str
 
 
@@ -20,7 +21,7 @@ class BookingUpdate(BaseModel):
 
 
 class BookingResponse(BookingBase):
-    id: int
+    id: UUID
     booked_at: datetime
     cancelled_at: Optional[datetime] = None
 

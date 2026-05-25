@@ -1,4 +1,7 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, Numeric, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -7,7 +10,7 @@ from app.db.base import Base
 class Location(Base):
     __tablename__ = "locations"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     address = Column(String, nullable=True)
     latitude = Column(Numeric(9, 6), nullable=True)

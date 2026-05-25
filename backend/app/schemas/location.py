@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -30,7 +31,7 @@ class LocationUpdate(BaseModel):
 
 
 class LocationResponse(LocationBase):
-    id: int
+    id: UUID
     created_at: datetime
     updated_at: Optional[datetime] = None
 

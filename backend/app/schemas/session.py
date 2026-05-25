@@ -1,16 +1,17 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, model_validator
 
 
 class SessionBase(BaseModel):
-    day_id: int
+    day_id: UUID
     starts_at: datetime
     ends_at: datetime
-    trainer_id: Optional[int] = None
+    trainer_id: Optional[UUID] = None
     capacity: int
-    class_type_id: Optional[int] = None
+    class_type_id: Optional[UUID] = None
     status: str
 
     @model_validator(mode="after")
@@ -25,17 +26,17 @@ class SessionCreate(SessionBase):
 
 
 class SessionUpdate(BaseModel):
-    day_id: Optional[int] = None
+    day_id: Optional[UUID] = None
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
-    trainer_id: Optional[int] = None
+    trainer_id: Optional[UUID] = None
     capacity: Optional[int] = None
-    class_type_id: Optional[int] = None
+    class_type_id: Optional[UUID] = None
     status: Optional[str] = None
 
 
 class SessionResponse(SessionBase):
-    id: int
+    id: UUID
 
     class Config:
         from_attributes = True

@@ -8,6 +8,7 @@ Create Date: 2026-05-25 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import UUID
 from alembic import op
 
 revision: str = "1858cc466a95"
@@ -20,8 +21,8 @@ def upgrade() -> None:
     # --- auth.users ---
     op.create_table(
         "users",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("telegram_id", sa.BigInteger(), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("telegram_id", sa.String(), nullable=False),
         sa.Column("telegram_username", sa.String(), nullable=True),
         sa.Column("first_name", sa.String(), nullable=True),
         sa.Column("last_name", sa.String(), nullable=True),
@@ -42,19 +43,19 @@ def upgrade() -> None:
     # --- auth.roles ---
     op.create_table(
         "roles",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("role", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.UniqueConstraint("name", name="uq_roles_name"),
+        sa.UniqueConstraint("role", name="uq_roles_role"),
         schema="auth",
     )
-    op.create_index("ix_auth_roles_name", "roles", ["name"], unique=True, schema="auth")
+    op.create_index("ix_auth_roles_role", "roles", ["role"], unique=True, schema="auth")
 
     # --- auth.permissions ---
     op.create_table(
         "permissions",
-        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("code", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
@@ -66,7 +67,7 @@ def upgrade() -> None:
     # --- public.locations ---
     op.create_table(
         "locations",
-        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("address", sa.String(), nullable=True),
         sa.Column("latitude", sa.Numeric(9, 6), nullable=True),
@@ -81,9 +82,9 @@ def upgrade() -> None:
     # --- offline.days ---
     op.create_table(
         "days",
-        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("date", sa.Date(), nullable=False),
-        sa.Column("location_id", sa.Integer(), nullable=True),
+        sa.Column("location_id", UUID(as_uuid=True), nullable=True),
         sa.Column("status", sa.String(64), nullable=False),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
@@ -95,13 +96,13 @@ def upgrade() -> None:
     # --- offline.sessions ---
     op.create_table(
         "sessions",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("day_id", sa.Integer(), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("day_id", UUID(as_uuid=True), nullable=False),
         sa.Column("starts_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("ends_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("trainer_id", sa.Integer(), nullable=True),
+        sa.Column("trainer_id", UUID(as_uuid=True), nullable=True),
         sa.Column("capacity", sa.Integer(), nullable=False),
-        sa.Column("class_type_id", sa.Integer(), nullable=True),
+        sa.Column("class_type_id", UUID(as_uuid=True), nullable=True),
         sa.Column("status", sa.String(64), nullable=False),
         schema="offline",
     )
@@ -112,9 +113,9 @@ def upgrade() -> None:
     # --- offline.bookings ---
     op.create_table(
         "bookings",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("session_id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("session_id", UUID(as_uuid=True), nullable=False),
+        sa.Column("user_id", UUID(as_uuid=True), nullable=False),
         sa.Column("status", sa.String(64), nullable=False),
         sa.Column("booked_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("cancelled_at", sa.DateTime(timezone=True), nullable=True),
@@ -126,11 +127,11 @@ def upgrade() -> None:
     # --- offline.attendance ---
     op.create_table(
         "attendance",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("booking_id", sa.Integer(), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("booking_id", UUID(as_uuid=True), nullable=False),
         sa.Column("status", sa.String(64), nullable=False),
         sa.Column("marked_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("marked_by", sa.Integer(), nullable=True),
+        sa.Column("marked_by", UUID(as_uuid=True), nullable=True),
         schema="offline",
     )
     op.create_index("ix_offline_attendance_booking_id", "attendance", ["booking_id"], schema="offline")
@@ -138,7 +139,7 @@ def upgrade() -> None:
     # --- billing.subscription_plans ---
     op.create_table(
         "subscription_plans",
-        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("code", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
@@ -156,9 +157,9 @@ def upgrade() -> None:
     # --- billing.subscriptions ---
     op.create_table(
         "subscriptions",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("plan_id", sa.Integer(), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("user_id", UUID(as_uuid=True), nullable=False),
+        sa.Column("plan_id", UUID(as_uuid=True), nullable=False),
         sa.Column("sessions_used", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),

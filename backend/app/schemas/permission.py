@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -19,7 +20,7 @@ class PermissionUpdate(BaseModel):
 
 
 class PermissionResponse(PermissionBase):
-    id: int
+    id: UUID
     created_at: datetime
 
     class Config:

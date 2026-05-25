@@ -6,7 +6,7 @@ from app.models.user import User
 
 INITIAL_USERS = [
     {
-        "telegram_id": 1,
+        "telegram_id": "1",
         "telegram_username": "superAdmin",
         "first_name": "Admin",
         "last_name": None,

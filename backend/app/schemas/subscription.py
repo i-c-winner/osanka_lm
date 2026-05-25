@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel
 
 
 class SubscriptionBase(BaseModel):
-    user_id: int
-    plan_id: int
+    user_id: UUID
+    plan_id: UUID
     sessions_used: int = 0
     started_at: datetime
     expires_at: Optional[datetime] = None
@@ -24,7 +25,7 @@ class SubscriptionUpdate(BaseModel):
 
 
 class SubscriptionResponse(SubscriptionBase):
-    id: int
+    id: UUID
 
     class Config:
         from_attributes = True

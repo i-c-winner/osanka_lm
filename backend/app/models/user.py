@@ -1,4 +1,7 @@
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Integer, String
+import uuid
+
+from sqlalchemy import Boolean, Column, Date, DateTime, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -8,8 +11,8 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}
 
-    id = Column(Integer, primary_key=True, index=True)
-    telegram_id = Column(BigInteger, unique=True, index=True, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    telegram_id = Column(String, unique=True, index=True, nullable=False)
     telegram_username = Column(String, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)

@@ -8,6 +8,7 @@ Create Date: 2026-05-25 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import UUID
 from alembic import op
 
 revision: str = "94e14a6f3d95"
@@ -19,16 +20,16 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "user_roles",
-        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column(
             "user_id",
-            sa.Integer(),
+            UUID(as_uuid=True),
             sa.ForeignKey("auth.users.id", ondelete="CASCADE"),
             nullable=False,
         ),
         sa.Column(
             "role_id",
-            sa.Integer(),
+            UUID(as_uuid=True),
             sa.ForeignKey("auth.roles.id", ondelete="CASCADE"),
             nullable=False,
         ),
