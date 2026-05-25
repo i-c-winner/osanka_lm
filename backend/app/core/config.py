@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
 
+    # Env
+    DEBUG: bool = False
+
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/dbname"
 
