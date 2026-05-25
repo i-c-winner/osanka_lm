@@ -9,6 +9,7 @@ from app.db.base import Base
 from app.core.config import settings
 # Import all models so Base knows about them
 import app.models.user  # noqa
+import app.models.user_role  # noqa
 import app.models.role  # noqa
 import app.models.permission  # noqa
 import app.models.location  # noqa
