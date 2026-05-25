@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,16 +14,29 @@ from app.schemas.user import UserCreateResponse
 router = APIRouter()
 
 
-@router.post("/dev-login", response_model=UserCreateResponse)
-async def dev_login(telegram_id: str, db: AsyncSession = Depends(get_db)):
-    if not settings.DEBUG:
-        raise HTTPException(status_code=403, detail="Not available in production")
+class TelegramLoginRequest(BaseModel):
+    telegram_id: str
+    telegram_username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    # В проде здесь будут поля для проверки подписи Telegram:
+    # hash: str
+    # auth_date: int
+    # ... остальные поля от Telegram Widget
 
-    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+
+@router.post("/login", response_model=UserCreateResponse)
+async def login(payload: TelegramLoginRequest, db: AsyncSession = Depends(get_db)):
+    if not settings.DEBUG:
+        # TODO: проверить подпись Telegram
+        # verify_telegram_hash(payload, settings.TELEGRAM_BOT_TOKEN)
+        raise HTTPException(status_code=501, detail="Telegram auth not implemented yet")
+
+    result = await db.execute(select(User).where(User.telegram_id == payload.telegram_id))
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(status_code=404, detail=f"User with telegram_id={telegram_id} not found")
+        raise HTTPException(status_code=404, detail=f"User with telegram_id={payload.telegram_id} not found")
 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="User is inactive")

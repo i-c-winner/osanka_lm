@@ -18,6 +18,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    op.execute("CREATE SCHEMA IF NOT EXISTS auth")
+    op.execute("CREATE SCHEMA IF NOT EXISTS offline")
+    op.execute("CREATE SCHEMA IF NOT EXISTS online")
+    op.execute("CREATE SCHEMA IF NOT EXISTS billing")
+
     # --- auth.users ---
     op.create_table(
         "users",
@@ -181,3 +186,7 @@ def downgrade() -> None:
     op.drop_table("permissions", schema="auth")
     op.drop_table("roles", schema="auth")
     op.drop_table("users", schema="auth")
+    op.execute("DROP SCHEMA IF EXISTS billing")
+    op.execute("DROP SCHEMA IF EXISTS online")
+    op.execute("DROP SCHEMA IF EXISTS offline")
+    op.execute("DROP SCHEMA IF EXISTS auth")

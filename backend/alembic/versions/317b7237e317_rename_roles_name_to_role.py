@@ -16,12 +16,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Column was already renamed manually in DB, only sync the index
-    op.execute("DROP INDEX IF EXISTS auth.ix_auth_roles_name")
-    op.create_index("ix_auth_roles_role", "roles", ["role"], unique=True, schema="auth")
+    # No-op: initial migration already creates roles.role with correct index
+    pass
 
 
 def downgrade() -> None:
-    op.drop_index("ix_auth_roles_role", table_name="roles", schema="auth")
-    op.alter_column("roles", "role", new_column_name="name", schema="auth")
-    op.create_index("ix_auth_roles_name", "roles", ["name"], unique=True, schema="auth")
+    pass
