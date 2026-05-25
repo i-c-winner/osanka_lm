@@ -1,0 +1,14 @@
+from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy.sql import func
+
+from app.db.base import Base
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+    __table_args__ = {"schema": "auth"}
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, nullable=False, index=True)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
