@@ -7,9 +7,17 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.db.base import Base
 from app.core.config import settings
-
 # Import all models so Base knows about them
 import app.models.user  # noqa
+import app.models.role  # noqa
+import app.models.permission  # noqa
+import app.models.location  # noqa
+import app.models.day  # noqa
+import app.models.session  # noqa
+import app.models.booking  # noqa
+import app.models.attendance  # noqa
+import app.models.subscription_plan  # noqa
+import app.models.subscription  # noqa
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
@@ -46,6 +54,8 @@ async def run_migrations_online() -> None:
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+        await connection.commit()
+
     await connectable.dispose()
 
 

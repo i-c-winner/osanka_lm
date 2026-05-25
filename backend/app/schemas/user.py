@@ -20,7 +20,6 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     pass
 
-
 class UserUpdate(BaseModel):
     telegram_username: Optional[str] = None
     first_name: Optional[str] = None
@@ -35,6 +34,8 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
     id: int
     telegram_id: int
     telegram_username: Optional[str] = None
