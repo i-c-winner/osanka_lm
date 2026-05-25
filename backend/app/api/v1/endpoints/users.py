@@ -1,7 +1,11 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_role
 from app.db.session import get_db
 from app.models.role import Role
 from app.models.user import User
@@ -11,6 +15,10 @@ from app.schemas.user import UserCreate, UserResponse
 router = APIRouter()
 
 DEFAULT_ROLE = "client"
+
+
+class ChangeRoleRequest(BaseModel):
+    role: str
 
 
 @router.post("/", response_model=UserResponse, status_code=201)
@@ -27,6 +35,32 @@ async def create_user(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     role = role_result.scalar_one_or_none()
     if role:
         db.add(UserRole(user_id=user.id, role_id=role.id))
+
+    await db.flush()
+    await db.refresh(user)
+
+    return user
+
+
+@router.put("/{user_id}/role", response_model=UserResponse)
+async def change_user_role(
+    user_id: UUID,
+    body: ChangeRoleRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("superadmin")),
+):
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    role_result = await db.execute(select(Role).where(Role.role == body.role))
+    role = role_result.scalar_one_or_none()
+    if not role:
+        raise HTTPException(status_code=404, detail=f"Role '{body.role}' not found")
+
+    await db.execute(delete(UserRole).where(UserRole.user_id == user.id))
+    db.add(UserRole(user_id=user.id, role_id=role.id))
 
     await db.flush()
     await db.refresh(user)
