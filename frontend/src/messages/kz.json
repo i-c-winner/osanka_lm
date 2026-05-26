@@ -1,0 +1,69 @@
+{
+  "common": {
+    "loading": "Жүктелуде...",
+    "error": "Қате орын алды",
+    "retry": "Қайталау",
+    "save": "Сақтау",
+    "cancel": "Бас тарту",
+    "confirm": "Растау",
+    "back": "Артқа",
+    "logout": "Шығу",
+    "noData": "Деректер жоқ"
+  },
+  "auth": {
+    "title": "Кіру",
+    "loginWithTelegram": "Telegram арқылы кіру",
+    "telegramId": "Telegram ID",
+    "submit": "Кіру",
+    "error": "Кіру қатесі"
+  },
+  "nav": {
+    "schedule": "Кесте",
+    "myBookings": "Менің жазбаларым",
+    "subscriptions": "Жазылымдар",
+    "profile": "Профиль",
+    "admin": "Басқару"
+  },
+  "sessions": {
+    "title": "Сабақ кестесі",
+    "book": "Жазылу",
+    "booked": "Жазылған",
+    "full": "Орын жоқ",
+    "capacity": "Орындар: {booked}/{total}",
+    "status": {
+      "active": "Белсенді",
+      "cancelled": "Бас тартылған",
+      "completed": "Аяқталған"
+    }
+  },
+  "bookings": {
+    "title": "Менің жазбаларым",
+    "empty": "Жазбалар жоқ",
+    "cancelBooking": "Жазбадан бас тарту",
+    "cancelConfirm": "Жазбадан бас тартқыңыз келе ме?",
+    "status": {
+      "booked": "Күтілуде",
+      "attended": "Қатысты",
+      "missed": "Өткізіп жіберді",
+      "cancelled": "Бас тартылған"
+    }
+  },
+  "subscriptions": {
+    "title": "Жазылымдар",
+    "mySubscription": "Менің жазылымым",
+    "noSubscription": "Белсенді жазылым жоқ",
+    "buy": "Сатып алу",
+    "active": "Белсенді",
+    "expired": "Мерзімі өтті",
+    "sessionsUsed": "Пайдаланылған сабақтар: {used}/{limit}",
+    "unlimited": "Шексіз",
+    "expiresAt": "Жарамдылық мерзімі: {date}",
+    "plans": "Тарифтер"
+  },
+  "profile": {
+    "title": "Профиль",
+    "name": "Аты",
+    "phone": "Телефон",
+    "language": "Тіл"
+  }
+}

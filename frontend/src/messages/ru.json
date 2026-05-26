@@ -1,0 +1,69 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Произошла ошибка",
+    "retry": "Повторить",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "back": "Назад",
+    "logout": "Выйти",
+    "noData": "Нет данных"
+  },
+  "auth": {
+    "title": "Вход",
+    "loginWithTelegram": "Войти через Telegram",
+    "telegramId": "Telegram ID",
+    "submit": "Войти",
+    "error": "Ошибка входа"
+  },
+  "nav": {
+    "schedule": "Расписание",
+    "myBookings": "Мои записи",
+    "subscriptions": "Абонементы",
+    "profile": "Профиль",
+    "admin": "Управление"
+  },
+  "sessions": {
+    "title": "Расписание занятий",
+    "book": "Записаться",
+    "booked": "Записан",
+    "full": "Мест нет",
+    "capacity": "Мест: {booked}/{total}",
+    "status": {
+      "active": "Активно",
+      "cancelled": "Отменено",
+      "completed": "Завершено"
+    }
+  },
+  "bookings": {
+    "title": "Мои записи",
+    "empty": "У вас нет записей",
+    "cancelBooking": "Отменить запись",
+    "cancelConfirm": "Вы уверены, что хотите отменить запись?",
+    "status": {
+      "booked": "Ожидает",
+      "attended": "Посещено",
+      "missed": "Пропущено",
+      "cancelled": "Отменено"
+    }
+  },
+  "subscriptions": {
+    "title": "Абонементы",
+    "mySubscription": "Мой абонемент",
+    "noSubscription": "Нет активного абонемента",
+    "buy": "Купить",
+    "active": "Активен",
+    "expired": "Истёк",
+    "sessionsUsed": "Использовано занятий: {used}/{limit}",
+    "unlimited": "Безлимитный",
+    "expiresAt": "Действует до: {date}",
+    "plans": "Тарифы"
+  },
+  "profile": {
+    "title": "Профиль",
+    "name": "Имя",
+    "phone": "Телефон",
+    "language": "Язык"
+  }
+}

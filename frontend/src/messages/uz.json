@@ -1,0 +1,69 @@
+{
+  "common": {
+    "loading": "Yuklanmoqda...",
+    "error": "Xatolik yuz berdi",
+    "retry": "Qayta urinish",
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "confirm": "Tasdiqlash",
+    "back": "Orqaga",
+    "logout": "Chiqish",
+    "noData": "Ma'lumot yo'q"
+  },
+  "auth": {
+    "title": "Kirish",
+    "loginWithTelegram": "Telegram orqali kirish",
+    "telegramId": "Telegram ID",
+    "submit": "Kirish",
+    "error": "Kirish xatosi"
+  },
+  "nav": {
+    "schedule": "Jadval",
+    "myBookings": "Mening yozuvlarim",
+    "subscriptions": "Obunalar",
+    "profile": "Profil",
+    "admin": "Boshqaruv"
+  },
+  "sessions": {
+    "title": "Mashg'ulotlar jadvali",
+    "book": "Yozilish",
+    "booked": "Yozilgan",
+    "full": "Joy yo'q",
+    "capacity": "O'rinlar: {booked}/{total}",
+    "status": {
+      "active": "Faol",
+      "cancelled": "Bekor qilingan",
+      "completed": "Tugallangan"
+    }
+  },
+  "bookings": {
+    "title": "Mening yozuvlarim",
+    "empty": "Yozuvlar yo'q",
+    "cancelBooking": "Yozuvni bekor qilish",
+    "cancelConfirm": "Yozuvni bekor qilishni xohlaysizmi?",
+    "status": {
+      "booked": "Kutilmoqda",
+      "attended": "Qatnashildi",
+      "missed": "O'tkazib yuborildi",
+      "cancelled": "Bekor qilingan"
+    }
+  },
+  "subscriptions": {
+    "title": "Obunalar",
+    "mySubscription": "Mening obunам",
+    "noSubscription": "Faol obuna yo'q",
+    "buy": "Sotib olish",
+    "active": "Faol",
+    "expired": "Muddati o'tgan",
+    "sessionsUsed": "Ishlatilgan darslar: {used}/{limit}",
+    "unlimited": "Cheksiz",
+    "expiresAt": "Amal qilish muddati: {date}",
+    "plans": "Tariflar"
+  },
+  "profile": {
+    "title": "Profil",
+    "name": "Ism",
+    "phone": "Telefon",
+    "language": "Til"
+  }
+}
