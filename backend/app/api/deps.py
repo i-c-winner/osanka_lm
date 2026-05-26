@@ -67,6 +67,8 @@ def require_role(*role_names: str):
         db: AsyncSession = Depends(get_db),
     ) -> User:
         roles = await get_user_roles(current_user, db)
+        if "superadmin" in roles:
+            return current_user
         if not any(r in roles for r in role_names):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -81,6 +83,9 @@ def require_permission(*permission_codes: str):
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
     ) -> User:
+        roles = await get_user_roles(current_user, db)
+        if "superadmin" in roles:
+            return current_user
         permissions = await get_user_permissions(current_user, db)
         if not any(p in permissions for p in permission_codes):
             raise HTTPException(
