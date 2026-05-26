@@ -9,10 +9,25 @@ from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models.booking import Booking
 from app.models.session import Session
+from app.models.subscription import Subscription
+from app.models.subscription_plan import SubscriptionPlan
 from app.models.user import User
 from app.schemas.booking import BookingResponse
 
 router = APIRouter()
+
+
+async def _get_active_subscription(user_id, db: AsyncSession):
+    """Возвращает активную подписку пользователя или None."""
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user_id,
+            Subscription.status == "active",
+            (Subscription.expires_at == None) | (Subscription.expires_at > now),
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 @router.post("/", response_model=BookingResponse, status_code=201)
@@ -21,6 +36,32 @@ async def create_booking(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("client")),
 ):
+    # Проверяем активную подписку
+    subscription = await _get_active_subscription(current_user.id, db)
+    if not subscription:
+        raise HTTPException(status_code=403, detail="No active subscription")
+
+    # Проверяем лимит занятий (если план не безлимитный)
+    plan_result = await db.execute(
+        select(SubscriptionPlan).where(SubscriptionPlan.id == subscription.plan_id)
+    )
+    plan = plan_result.scalar_one()
+    if not plan.is_unlimited and plan.sessions_limit is not None:
+        # Считаем активные брони (ещё не посещённые и не отменённые)
+        active_bookings_result = await db.execute(
+            select(func.count()).select_from(Booking).where(
+                Booking.user_id == current_user.id,
+                Booking.status == "booked",
+            )
+        )
+        active_bookings_count = active_bookings_result.scalar()
+
+        if subscription.sessions_used + active_bookings_count >= plan.sessions_limit:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Session limit reached: {subscription.sessions_used} attended + {active_bookings_count} booked = {plan.sessions_limit} limit",
+            )
+
     # Проверяем что сессия существует
     session_result = await db.execute(
         select(Session).where(Session.id == session_id)

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, bookings, sessions, subscription_plans, subscriptions, users
+from app.api.v1.endpoints import attendance, auth, bookings, sessions, subscription_plans, subscriptions, users
 
 router = APIRouter()
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -9,3 +9,4 @@ router.include_router(subscription_plans.router, prefix="/subscription-plans", t
 router.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
 router.include_router(bookings.router, prefix="/bookings", tags=["bookings"])
 router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
+router.include_router(attendance.router, prefix="", tags=["attendance"])
