@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,4 +28,23 @@ async def create_subscription_plan(
     await db.flush()
     await db.refresh(plan)
 
+    return plan
+
+
+@router.get("/", response_model=list[SubscriptionPlanResponse])
+async def list_subscription_plans(db: AsyncSession = Depends(get_db)):
+    """Публичный список активных тарифов."""
+    result = await db.execute(
+        select(SubscriptionPlan).where(SubscriptionPlan.is_active == True).order_by(SubscriptionPlan.name)
+    )
+    return result.scalars().all()
+
+
+@router.get("/{plan_id}", response_model=SubscriptionPlanResponse)
+async def get_subscription_plan(plan_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Публичный просмотр тарифа."""
+    result = await db.execute(select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id))
+    plan = result.scalar_one_or_none()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Subscription plan not found")
     return plan
