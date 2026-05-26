@@ -1,5 +1,6 @@
-import { BookingList } from "@/widgets/BookingList";
+import { redirect } from "next/navigation";
 
+// Страница удалена. Редирект на главную.
 export default function MyBookingsPage() {
-  return <BookingList />;
+  redirect("/main");
 }

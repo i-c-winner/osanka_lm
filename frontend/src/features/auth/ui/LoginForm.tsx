@@ -6,28 +6,27 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
 import TelegramIcon from "@mui/icons-material/Telegram";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/shared/i18n/navigation";
 import { useAuth } from "../model/useAuth";
 import { brand } from "@/shared/theme";
 
-interface LoginFormProps {
-  onSuccess?: () => void;
-}
-
-export function LoginForm({ onSuccess }: LoginFormProps) {
+export function LoginForm() {
   const t = useTranslations("auth");
   const { login, loading, error } = useAuth();
   const [telegramId, setTelegramId] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!telegramId.trim()) return;
     try {
       await login({ telegram_id: telegramId.trim() });
-      onSuccess?.();
+      router.push("/main");
     } catch {
-      // error handled in hook
+      // ошибка обрабатывается в хуке
     }
   };
 
@@ -86,7 +85,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         variant="contained"
         size="large"
         disabled={loading}
-        startIcon={<TelegramIcon />}
+        startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <TelegramIcon />}
         fullWidth
       >
         {t("loginWithTelegram")}

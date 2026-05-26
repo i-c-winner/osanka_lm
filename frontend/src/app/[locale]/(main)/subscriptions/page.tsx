@@ -1,5 +1,6 @@
-import { SubscriptionPlans } from "@/widgets/SubscriptionPlans";
+import { redirect } from "next/navigation";
 
+// Страница удалена. Редирект на главную.
 export default function SubscriptionsPage() {
-  return <SubscriptionPlans />;
+  redirect("/main");
 }
