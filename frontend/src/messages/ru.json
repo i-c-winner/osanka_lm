@@ -71,5 +71,57 @@
     "name": "Имя",
     "phone": "Телефон",
     "language": "Язык"
+  },
+  "hello": {
+    "eyebrow": "Метод Gym Balance · с 2021",
+    "titleLine1": "Мягкая",
+    "titleLine2": "практика",
+    "titleLine3": "с устойчивым",
+    "titleLine4": "прогрессом",
+    "description": "Спокойный ритм, точная техника и понятная нагрузка. Тренировки дома, которые поддерживают тело — последовательно и без перегруза.",
+    "ctaPrimary": "Начать 7 дней бесплатно",
+    "ctaSecondary": "Посмотреть пробный урок",
+    "stat1Value": "12 000+",
+    "stat1Label": "Учениц в практике",
+    "stat2Value": "180+",
+    "stat2Label": "Уроков на платформе",
+    "stat3Value": "4.9/5",
+    "stat3Label": "Средняя оценка",
+    "badgeLiveTitle": "Сегодня в эфире",
+    "badgeLiveDesc": "Раскрытие спины · 25 мин",
+    "badgeJointTitle": "Бережно к суставам",
+    "badgeJointDesc": "без прыжков и перегруза",
+    "imgAlt": "Практика Gym Balance"
+  },
+  "marquee": {
+    "mobility": "Подвижность",
+    "silence": "Тишина",
+    "strength": "Сила",
+    "awareness": "Осознанность",
+    "comfort": "Комфорт",
+    "balance": "Баланс",
+    "breathing": "Дыхание",
+    "support": "Опора"
+  },
+  "footer": {
+    "tagline": "Мягкая методика для устойчивого прогресса. Тренировки, которые поддерживают вас день за днём.",
+    "practiceHeading": "Практика",
+    "communityHeading": "Сообщество",
+    "newsletterHeading": "Письма по пятницам",
+    "newsletterDesc": "Раз в неделю — короткое письмо о практике, дыхании и опоре.",
+    "emailPlaceholder": "Ваш email",
+    "subscribeBtn": "Подписаться",
+    "subscribeSuccess": "Подписка оформлена ✓",
+    "copyright": "© 2026 Gym Balance · Сделано с теплом",
+    "links": {
+      "programs": "Программы",
+      "live": "Живые эфиры",
+      "mySpace": "Моё пространство",
+      "challenges": "Челленджи",
+      "stories": "Истории учениц",
+      "team": "Команда",
+      "blog": "Журнал",
+      "contacts": "Контакты"
+    }
   }
 }

@@ -71,5 +71,57 @@
     "name": "Аты",
     "phone": "Телефон",
     "language": "Тіл"
+  },
+  "hello": {
+    "eyebrow": "Gym Balance әдісі · 2021 жылдан",
+    "titleLine1": "Жұмсақ",
+    "titleLine2": "тәжірибе",
+    "titleLine3": "тұрақты",
+    "titleLine4": "нәтижелермен",
+    "description": "Тыныш ырғақ, дәл техника және түсінікті жүктеме. Үйде жаттығулар — жүйелі және шамадан тыс жүктемесіз.",
+    "ctaPrimary": "7 күнді тегін бастау",
+    "ctaSecondary": "Сынақ сабақты қарау",
+    "stat1Value": "12 000+",
+    "stat1Label": "Тәжірибедегі оқушылар",
+    "stat2Value": "180+",
+    "stat2Label": "Платформадағы сабақтар",
+    "stat3Value": "4.9/5",
+    "stat3Label": "Орташа баға",
+    "badgeLiveTitle": "Бүгін эфирде",
+    "badgeLiveDesc": "Арқаны ашу · 25 минут",
+    "badgeJointTitle": "Буындарға ұқыптылық",
+    "badgeJointDesc": "секіріссіз және жүктемесіз",
+    "imgAlt": "Gym Balance тәжірибесі"
+  },
+  "marquee": {
+    "mobility": "Қозғалғыштық",
+    "silence": "Тыныштық",
+    "strength": "Күш",
+    "awareness": "Зейін",
+    "comfort": "Жайлылық",
+    "balance": "Тепе-теңдік",
+    "breathing": "Дем",
+    "support": "Тіреу"
+  },
+  "footer": {
+    "tagline": "Тұрақты нәтижелерге арналған жұмсақ әдіс. Денені күн сайын қолдайтын жаттығулар.",
+    "practiceHeading": "Тәжірибе",
+    "communityHeading": "Қауымдастық",
+    "newsletterHeading": "Жұма хаттары",
+    "newsletterDesc": "Аптасына бір рет — тәжірибе, дем алу және тіреу туралы қысқа хат.",
+    "emailPlaceholder": "Email-іңіз",
+    "subscribeBtn": "Жазылу",
+    "subscribeSuccess": "Жазылым рәсімделді ✓",
+    "copyright": "© 2026 Gym Balance · Жылымен жасалған",
+    "links": {
+      "programs": "Бағдарламалар",
+      "live": "Тікелей эфирлер",
+      "mySpace": "Менің кеңістігім",
+      "challenges": "Челлендждер",
+      "stories": "Оқушылар әңгімелері",
+      "team": "Команда",
+      "blog": "Журнал",
+      "contacts": "Байланыстар"
+    }
   }
 }

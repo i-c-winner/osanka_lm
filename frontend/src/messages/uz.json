@@ -71,5 +71,57 @@
     "name": "Ism",
     "phone": "Telefon",
     "language": "Til"
+  },
+  "hello": {
+    "eyebrow": "Gym Balance usuli · 2021 yildan",
+    "titleLine1": "Yumshoq",
+    "titleLine2": "amaliyot",
+    "titleLine3": "barqaror",
+    "titleLine4": "natijalar bilan",
+    "description": "Tinch ritm, aniq texnika va tushunarli yuklanish. Uyda mashqlar — izchil va haddan ziyod yuklanmasdan.",
+    "ctaPrimary": "7 kunni bepul boshlash",
+    "ctaSecondary": "Sinov darsini ko'rish",
+    "stat1Value": "12 000+",
+    "stat1Label": "Amaliyotdagi o'quvchilar",
+    "stat2Value": "180+",
+    "stat2Label": "Platformadagi darslar",
+    "stat3Value": "4.9/5",
+    "stat3Label": "O'rtacha baho",
+    "badgeLiveTitle": "Bugun efirda",
+    "badgeLiveDesc": "Orqani ochish · 25 daqiqa",
+    "badgeJointTitle": "Bo'g'imlarga ehtiyotkorlik",
+    "badgeJointDesc": "sakrashsiz va yuklanmasdan",
+    "imgAlt": "Gym Balance amaliyoti"
+  },
+  "marquee": {
+    "mobility": "Harakatchanlik",
+    "silence": "Jimlik",
+    "strength": "Kuch",
+    "awareness": "Ongli bo'lish",
+    "comfort": "Qulaylik",
+    "balance": "Muvozanat",
+    "breathing": "Nafas",
+    "support": "Tayanch"
+  },
+  "footer": {
+    "tagline": "Barqaror natijalar uchun yumshoq metodika. Tanani har kuni qo'llab-quvvatlaydigan mashqlar.",
+    "practiceHeading": "Amaliyot",
+    "communityHeading": "Jamiyat",
+    "newsletterHeading": "Juma xatlari",
+    "newsletterDesc": "Haftada bir marta — amaliyot, nafas va tayanch haqida qisqa xat.",
+    "emailPlaceholder": "Emailingiz",
+    "subscribeBtn": "Obuna bo'lish",
+    "subscribeSuccess": "Obuna rasmiylashtirилди ✓",
+    "copyright": "© 2026 Gym Balance · Mehr bilan yaratilgan",
+    "links": {
+      "programs": "Dasturlar",
+      "live": "Jonli efirlar",
+      "mySpace": "Mening maydonim",
+      "challenges": "Musobaqalar",
+      "stories": "O'quvchilar hikoyalari",
+      "team": "Jamoa",
+      "blog": "Jurnal",
+      "contacts": "Kontaktlar"
+    }
   }
 }
