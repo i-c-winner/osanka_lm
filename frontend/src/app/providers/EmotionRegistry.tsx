@@ -23,7 +23,7 @@ export function EmotionRegistry({ children }: { children: React.ReactNode }) {
       if (cache.inserted[serialized.name] === undefined) {
         inserted.push({ name: serialized.name, isGlobal: !selector });
       }
-      return prevInsert(...args);
+      return (prevInsert as (...a: any[]) => ReturnType<typeof prevInsert>)(...args);
     };
 
     const flush = () => {
