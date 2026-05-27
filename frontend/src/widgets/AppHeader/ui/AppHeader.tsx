@@ -1,9 +1,11 @@
 "use client";
 
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import SearchIcon from "@mui/icons-material/Search";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/shared/i18n/navigation";
 import { brand } from "@/shared/theme";
@@ -13,7 +15,6 @@ import { brand } from "@/shared/theme";
 function Logo() {
   return (
     <Link href="/main" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
-      {/* Иконка — терракотовый круг */}
       <Box
         sx={{
           width:        28,
@@ -24,17 +25,16 @@ function Logo() {
           boxShadow:    `0 2px 8px -2px ${alpha(brand.terracotta, 0.45)}`,
         }}
       />
-      {/* Wordmark */}
       <Typography
         sx={{
-          fontFamily: "var(--font-display)",
-          fontStyle:  "italic",
-          fontWeight: 400,
-          fontSize:   "18px",
-          lineHeight: 1,
-          color:      brand.cocoa,
+          fontFamily:    "var(--font-display)",
+          fontStyle:     "italic",
+          fontWeight:    400,
+          fontSize:      "18px",
+          lineHeight:    1,
+          color:         brand.cocoa,
           letterSpacing: "-0.01em",
-          whiteSpace: "nowrap",
+          whiteSpace:    "nowrap",
         }}
       >
         Gym Balance
@@ -72,14 +72,54 @@ function NavLink({ href, label, active }: NavLinkProps) {
         {/* Точка-индикатор активного пункта */}
         <Box
           sx={{
-            width:        4,
-            height:       4,
-            borderRadius: "50%",
+            width:           4,
+            height:          4,
+            borderRadius:    "50%",
             backgroundColor: brand.terracotta,
-            opacity:      active ? 1 : 0,
-            transition:   "opacity 0.2s ease",
+            opacity:         active ? 1 : 0,
+            transition:      "opacity 0.2s ease",
           }}
         />
+      </Box>
+    </Link>
+  );
+}
+
+// ─── Аватар пользователя ──────────────────────────────────────────────────────
+
+function UserAvatar() {
+  return (
+    <Link href="/my-space" style={{ textDecoration: "none" }}>
+      <Box
+        sx={{
+          width:        32,
+          height:       32,
+          borderRadius: "50%",
+          background:   `radial-gradient(circle at 38% 38%, ${brand.blush}, ${brand.terracotta} 70%)`,
+          display:      "flex",
+          alignItems:   "center",
+          justifyContent: "center",
+          cursor:       "pointer",
+          boxShadow:    `0 2px 8px -2px ${alpha(brand.terracotta, 0.45)}`,
+          transition:   "transform 0.15s ease, box-shadow 0.2s ease",
+          "&:hover": {
+            transform:  "translateY(-1px)",
+            boxShadow:  `0 4px 12px -2px ${alpha(brand.terracotta, 0.55)}`,
+          },
+        }}
+      >
+        <Typography
+          sx={{
+            fontFamily: "var(--font-body)",
+            fontWeight: 600,
+            fontSize:   "12px",
+            color:      "#fff",
+            lineHeight: 1,
+            userSelect: "none",
+          }}
+        >
+          Я
+        </Typography>
       </Box>
     </Link>
   );
@@ -88,11 +128,11 @@ function NavLink({ href, label, active }: NavLinkProps) {
 // ─── AppHeader ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { key: "home",         href: "/main"         },
-  { key: "programs",     href: "/programs"     },
-  { key: "practice",     href: "/practice"     },
+  { key: "home",         href: "/main"       },
+  { key: "programs",     href: "/programs"   },
+  { key: "practice",     href: "/practice"   },
   { key: "subscription", href: "/subscription" },
-  { key: "reviews",      href: "/reviews"      },
+  { key: "mySpace",      href: "/my-space"   },
 ] as const;
 
 export function AppHeader() {
@@ -103,24 +143,17 @@ export function AppHeader() {
     <Box
       component="header"
       sx={{
-        // ── Позиционирование ──────────────────────────────────────
         position:  "sticky",
         top:       0,
         zIndex:    1100,
 
-        // ── Стеклянный фон ────────────────────────────────────────
-        backgroundColor: alpha(brand.cream, 0.72),
-        backdropFilter:  "blur(18px) saturate(160%)",
+        backgroundColor:      alpha(brand.cream, 0.72),
+        backdropFilter:       "blur(18px) saturate(160%)",
         WebkitBackdropFilter: "blur(18px) saturate(160%)",
 
-        // ── Граница снизу ─────────────────────────────────────────
-        borderBottom:    `1px solid ${alpha(brand.line, 0.55)}`,
-
-        // ── Тень ─────────────────────────────────────────────────
-        boxShadow:       `0 2px 16px -8px ${alpha(brand.cocoa, 0.08)}`,
-
-        // ── Переход при скролле ───────────────────────────────────
-        transition:      "background-color 0.3s ease, box-shadow 0.3s ease",
+        borderBottom: `1px solid ${alpha(brand.line, 0.55)}`,
+        boxShadow:    `0 2px 16px -8px ${alpha(brand.cocoa, 0.08)}`,
+        transition:   "background-color 0.3s ease, box-shadow 0.3s ease",
       }}
     >
       <Box
@@ -138,7 +171,7 @@ export function AppHeader() {
         {/* Логотип */}
         <Logo />
 
-        {/* Навигация — скрывается на мобильных */}
+        {/* Навигация */}
         <Box
           component="nav"
           sx={{
@@ -157,45 +190,32 @@ export function AppHeader() {
           ))}
         </Box>
 
-        {/* CTA-кнопка */}
-        <Button
-          component={Link}
-          href="/main"
-          variant="contained"
-          size="small"
-          endIcon={
-            <Box component="span" sx={{ fontSize: "13px", lineHeight: 1, mt: "-1px" }}>
-              ↗
-            </Box>
-          }
-          sx={{
-            // Переопределяем цвет: тёмная какао-кнопка
-            backgroundColor: brand.cocoa,
-            color:           brand.ivory,
-            fontFamily:      "var(--font-body)",
-            fontWeight:      500,
-            fontSize:        "13px",
-            letterSpacing:   "0.02em",
-            borderRadius:    "100px",
-            px:              "20px",
-            py:              "8px",
-            whiteSpace:      "nowrap",
-            flexShrink:      0,
-            boxShadow:       `0 4px 14px -4px ${alpha(brand.cocoa, 0.35)}`,
-            transition:      "background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease",
-            "&:hover": {
-              backgroundColor: brand.cocoaSoft,
-              boxShadow:       `0 6px 18px -4px ${alpha(brand.cocoa, 0.40)}`,
-              transform:       "translateY(-1px)",
-            },
-            "&:active": {
-              transform:  "translateY(0)",
-              boxShadow:  `0 2px 8px -2px ${alpha(brand.cocoa, 0.30)}`,
-            },
-          }}
-        >
-          {t("mySpace")}
-        </Button>
+        {/* Иконки справа */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <IconButton
+            size="small"
+            sx={{
+              color:      brand.cocoaSoft,
+              "&:hover": { color: brand.cocoa, backgroundColor: alpha(brand.line, 0.4) },
+            }}
+          >
+            <NotificationsNoneIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+
+          <IconButton
+            size="small"
+            sx={{
+              color:      brand.cocoaSoft,
+              "&:hover": { color: brand.cocoa, backgroundColor: alpha(brand.line, 0.4) },
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+
+          <Box sx={{ ml: "4px" }}>
+            <UserAvatar />
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
