@@ -18,6 +18,12 @@
     "error": "Кіру қатесі"
   },
   "nav": {
+    "home": "Басты бет",
+    "programs": "Бағдарламалар",
+    "practice": "Тәжірибе",
+    "subscription": "Жазылым",
+    "reviews": "Пікірлер",
+    "mySpace": "Менің кеңістігім",
     "schedule": "Кесте",
     "myBookings": "Менің жазбаларым",
     "subscriptions": "Жазылымдар",

@@ -18,6 +18,12 @@
     "error": "Kirish xatosi"
   },
   "nav": {
+    "home": "Bosh sahifa",
+    "programs": "Dasturlar",
+    "practice": "Amaliyot",
+    "subscription": "Obuna",
+    "reviews": "Sharhlar",
+    "mySpace": "Mening maydonim",
     "schedule": "Jadval",
     "myBookings": "Mening yozuvlarim",
     "subscriptions": "Obunalar",

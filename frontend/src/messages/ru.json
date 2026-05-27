@@ -18,6 +18,12 @@
     "error": "Ошибка входа"
   },
   "nav": {
+    "home": "Главная",
+    "programs": "Программы",
+    "practice": "Практика",
+    "subscription": "Подписка",
+    "reviews": "Отзывы",
+    "mySpace": "Моё пространство",
     "schedule": "Расписание",
     "myBookings": "Мои записи",
     "subscriptions": "Абонементы",
