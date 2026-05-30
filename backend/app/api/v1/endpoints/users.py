@@ -11,6 +11,7 @@ from app.models.role import Role
 from app.models.user import User
 from app.models.user_role import UserRole
 from app.schemas.user import MeResponse, UserCreate, UserResponse
+from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -19,6 +20,26 @@ DEFAULT_ROLE = "client"
 
 class ChangeRoleRequest(BaseModel):
     role: str
+
+
+class ChangeActiveRequest(BaseModel):
+    is_active: bool
+
+
+@router.get("/", response_model=list[MeResponse])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("admin", "superadmin")),
+):
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+
+    out = []
+    for user in users:
+        roles = await get_user_roles(user, db)
+        out.append(MeResponse.model_validate({**user.__dict__, "roles": roles}))
+
+    return out
 
 
 @router.get("/me", response_model=MeResponse)
@@ -51,6 +72,28 @@ async def create_user(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     return user
 
 
+@router.patch("/{user_id}/active", response_model=UserResponse)
+async def set_user_active(
+    user_id: UUID,
+    body: ChangeActiveRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "superadmin")),
+):
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot change own active status")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.is_active = body.is_active
+    await db.flush()
+    await db.refresh(user)
+
+    return user
+
+
 @router.put("/{user_id}/role", response_model=UserResponse)
 async def change_user_role(
     user_id: UUID,
@@ -62,6 +105,9 @@ async def change_user_role(
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if body.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Cannot assign superadmin role")
 
     role_result = await db.execute(select(Role).where(Role.role == body.role))
     role = role_result.scalar_one_or_none()

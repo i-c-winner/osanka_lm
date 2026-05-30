@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { usersApi } from "@/shared/api";
+import { userStorage } from "@/shared/lib/userStorage";
 import type { MeResponse } from "@/shared/api";
 
 export function useMe() {
-  const [me, setMe] = useState<MeResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [me, setMe] = useState<MeResponse | null>(() => userStorage.get());
+  const [loading, setLoading] = useState(() => userStorage.get() === null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     usersApi
       .getMe()
-      .then(setMe)
+      .then((fresh) => {
+        userStorage.set(fresh);
+        setMe(fresh);
+      })
       .catch(() => setError("Не удалось загрузить профиль"))
       .finally(() => setLoading(false));
   }, []);

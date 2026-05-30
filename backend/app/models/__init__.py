@@ -1,0 +1,13 @@
+from app.models.user import User  # noqa
+from app.models.role import Role  # noqa
+from app.models.user_role import UserRole  # noqa
+from app.models.permission import Permission  # noqa
+from app.models.role_permission import RolePermission  # noqa
+from app.models.location import Location  # noqa
+from app.models.session import Session  # noqa
+from app.models.session_participant import SessionParticipant  # noqa
+from app.models.booking import Booking  # noqa
+from app.models.subscription import Subscription  # noqa
+from app.models.subscription_plan import SubscriptionPlan  # noqa
+from app.models.day import Day  # noqa
+from app.models.attendance import Attendance  # noqa

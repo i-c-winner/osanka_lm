@@ -98,11 +98,16 @@ const FC_STYLES = `
     cursor: default;
     opacity: 0.35;
   }
-  .fc-osanka table { border-collapse: separate; border-spacing: 4px !important; }
-  .fc-osanka .fc-scrollgrid-sync-table { border-spacing: 4px !important; }
-  .fc-osanka .fc-col-header { margin-bottom: 8px; }
-  .fc-osanka .fc-daygrid-body { width: 100% !important; }
+  .fc-osanka table { border-collapse: separate; border-spacing: 0 !important; }
+  .fc-osanka .fc-daygrid-body td,
+  .fc-osanka .fc-col-header th { padding: 2px !important; }
+  .fc-osanka .fc-col-header { margin-bottom: 4px; }
+  .fc-osanka .fc-daygrid-body,
+  .fc-osanka .fc-daygrid-body table,
+  .fc-osanka .fc-col-header,
+  .fc-osanka .fc-col-header table { width: 100% !important; }
   .fc-osanka .fc-scrollgrid-section > * { border: none !important; }
+  .fc-osanka .fc-view-harness { overflow: hidden !important; }
   .fc-osanka .fc-day-custom-inner {
     display: flex;
     flex-direction: column;
@@ -276,7 +281,8 @@ export function MonthCalendar() {
     <Box sx={{
       borderRadius: "22px", backgroundColor: brand.ivory,
       border: `1px solid ${alpha(brand.line, 0.7)}`,
-      p: { xs: "20px", md: "28px" },
+      p: { xs: "16px", md: "28px" },
+      overflow: "hidden",
       boxShadow: `0 2px 12px -4px ${alpha(brand.cocoa, 0.07)}`,
     }}>
       {/* Инжект CSS */}
@@ -293,7 +299,7 @@ export function MonthCalendar() {
         </Box>
 
         {/* Контролы */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
           <Box onClick={goToday} sx={{
             borderRadius: "100px", border: `1px solid ${alpha(brand.line, 0.8)}`,
             px: "14px", py: "7px", cursor: "pointer",

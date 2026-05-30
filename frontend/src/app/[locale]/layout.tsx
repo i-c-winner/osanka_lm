@@ -46,6 +46,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     <html
       lang={locale}
       className={`${cormorant.variable} ${manrope.variable}`}
+      suppressHydrationWarning
     >
       <body>
         <NextIntlClientProvider messages={messages}>

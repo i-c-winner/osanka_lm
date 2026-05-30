@@ -27,6 +27,7 @@ INITIAL_ROLES = [
     {"role": "trainer", "description": "Trainer access"},
     {"role": "client", "description": "Regular client"},
     {"role": "user", "description": "Default role for all registered users"},
+    {"role": "guest", "description": "Newly registered user, pending verification"},
 ]
 
 
