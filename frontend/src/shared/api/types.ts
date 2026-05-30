@@ -58,6 +58,7 @@ export interface SessionResponse {
   capacity: number;
   class_type_id?: string;
   status: SessionStatus;
+  location_id?: string;
 }
 
 export interface SessionCreate {
