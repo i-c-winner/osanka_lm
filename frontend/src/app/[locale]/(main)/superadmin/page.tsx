@@ -18,9 +18,14 @@ import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
 import { alpha } from "@mui/material/styles";
 import { brand } from "@/shared/theme";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
 import { useMe } from "@/features/me/model/useMe";
-import { usersApi } from "@/shared/api";
-import type { MeResponse } from "@/shared/api";
+import { usersApi, locationsApi } from "@/shared/api";
+import type { MeResponse, LocationResponse } from "@/shared/api";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -205,14 +210,179 @@ function UsersTab() {
 // ─── Заглушки остальных вкладок ───────────────────────────────────────────────
 
 function LocaleTab() {
+  const [locations, setLocations] = useState<LocationResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ name: "", address: "" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await locationsApi.list(true);
+      setLocations(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleToggleActive(loc: LocationResponse) {
+    setToggling(loc.id);
+    try {
+      const updated = await locationsApi.update(loc.id, { is_active: !loc.is_active });
+      setLocations((prev) => prev.map((l) => l.id === updated.id ? updated : l));
+    } finally {
+      setToggling(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(id);
+    try {
+      await locationsApi.delete(id);
+      setLocations((prev) => prev.filter((l) => l.id !== id));
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    setAdding(true);
+    try {
+      const created = await locationsApi.create({ name: form.name.trim(), address: form.address.trim() || undefined });
+      setLocations((prev) => [...prev, created]);
+      setForm({ name: "", address: "" });
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: "40px" }}>
+        <CircularProgress size={28} sx={{ color: brand.terracotta }} />
+      </Box>
+    );
+  }
+
   return (
     <Box>
-      <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "24px", fontWeight: 400, color: brand.cocoa, mb: "12px" }}>
-        Локализация
+      <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: brand.cocoa, mb: "20px" }}>
+        Локации{" "}
+        <Box component="span" sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute, fontWeight: 400 }}>
+          ({locations.length})
+        </Box>
       </Typography>
-      <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.cocoaSoft, lineHeight: 1.6 }}>
-        Управление переводами и языковыми настройками приложения. В разработке.
-      </Typography>
+
+      {/* Форма добавления */}
+      <Box
+        component="form"
+        onSubmit={handleAdd}
+        sx={{
+          display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end",
+          mb: "20px", p: "20px", borderRadius: "14px",
+          border: `1px solid ${alpha(brand.line, 0.7)}`,
+          backgroundColor: alpha(brand.cream, 0.4),
+        }}
+      >
+        <TextField
+          label="Название"
+          value={form.name}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          size="small"
+          required
+          disabled={adding}
+          sx={{ flex: "1 1 180px", "& .MuiInputBase-input": { fontFamily: "var(--font-body)", fontSize: "13px" } }}
+        />
+        <TextField
+          label="Адрес"
+          value={form.address}
+          onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+          size="small"
+          disabled={adding}
+          sx={{ flex: "2 1 240px", "& .MuiInputBase-input": { fontFamily: "var(--font-body)", fontSize: "13px" } }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={adding || !form.name.trim()}
+          startIcon={adding ? <CircularProgress size={14} color="inherit" /> : <AddIcon />}
+          sx={{
+            backgroundColor: brand.cocoa, color: brand.ivory, borderRadius: "10px",
+            fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px",
+            textTransform: "none", boxShadow: "none", whiteSpace: "nowrap",
+            "&:hover": { backgroundColor: brand.cocoaSoft, boxShadow: "none" },
+          }}
+        >
+          Добавить
+        </Button>
+      </Box>
+
+      {/* Таблица */}
+      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflow: "hidden" }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              {["Название", "Адрес", "Активна", ""].map((h) => (
+                <TableCell key={h} sx={HEAD_CELL_SX}>{h}</TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {locations.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ ...CELL_SX, textAlign: "center", color: brand.mute, py: "24px" }}>
+                  Нет локаций
+                </TableCell>
+              </TableRow>
+            )}
+            {locations.map((loc) => {
+              const isDeleting = deleting === loc.id;
+              const isToggling = toggling === loc.id;
+              return (
+                <TableRow
+                  key={loc.id}
+                  sx={{
+                    opacity: isDeleting || isToggling ? 0.4 : 1, transition: "opacity 0.2s",
+                    "&:last-child td": { borderBottom: "none" },
+                    "&:hover td": { backgroundColor: alpha(brand.cream, 0.4) },
+                  }}
+                >
+                  <TableCell sx={{ ...CELL_SX, fontWeight: 500 }}>{loc.name}</TableCell>
+                  <TableCell sx={{ ...CELL_SX, color: brand.mute }}>{loc.address ?? "—"}</TableCell>
+                  <TableCell sx={CELL_SX}>
+                    <Switch
+                      checked={loc.is_active}
+                      disabled={isToggling || isDeleting}
+                      onChange={() => handleToggleActive(loc)}
+                      size="small"
+                      sx={{
+                        "& .MuiSwitch-switchBase.Mui-checked": { color: brand.sage },
+                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: brand.sage },
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ ...CELL_SX, width: 48, pr: "8px" }}>
+                    <IconButton
+                      size="small"
+                      disabled={isDeleting}
+                      onClick={() => handleDelete(loc.id)}
+                      sx={{ color: brand.mute, "&:hover": { color: brand.terracotta, backgroundColor: alpha(brand.terracotta, 0.08) } }}
+                    >
+                      <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   );
 }

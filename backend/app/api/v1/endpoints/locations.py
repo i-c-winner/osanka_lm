@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,10 +28,14 @@ async def create_location(
 
 @router.get("/", response_model=list[LocationResponse])
 async def list_locations(
+    include_inactive: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Location).where(Location.is_active == True).order_by(Location.name))
+    q = select(Location).order_by(Location.name)
+    if not include_inactive:
+        q = q.where(Location.is_active == True)
+    result = await db.execute(q)
     return result.scalars().all()
 
 

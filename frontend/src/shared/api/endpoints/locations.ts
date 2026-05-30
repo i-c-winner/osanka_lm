@@ -2,8 +2,8 @@ import { apiClient } from "../client";
 import type { LocationCreate, LocationResponse, LocationUpdate } from "../types";
 
 export const locationsApi = {
-  list: () =>
-    apiClient.get<LocationResponse[]>("/locations").then((r) => r.data),
+  list: (includeInactive = false) =>
+    apiClient.get<LocationResponse[]>("/locations", { params: { include_inactive: includeInactive } }).then((r) => r.data),
 
   get: (id: string) =>
     apiClient.get<LocationResponse>(`/locations/${id}`).then((r) => r.data),
