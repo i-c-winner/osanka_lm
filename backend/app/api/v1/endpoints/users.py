@@ -21,6 +21,10 @@ class ChangeRoleRequest(BaseModel):
     role: str
 
 
+class ChangeActiveRequest(BaseModel):
+    is_active: bool
+
+
 @router.get("/me", response_model=MeResponse)
 async def get_me(
     current_user: User = Depends(get_current_user),
@@ -45,6 +49,28 @@ async def create_user(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     if role:
         db.add(UserRole(user_id=user.id, role_id=role.id))
 
+    await db.flush()
+    await db.refresh(user)
+
+    return user
+
+
+@router.patch("/{user_id}/active", response_model=UserResponse)
+async def set_user_active(
+    user_id: UUID,
+    body: ChangeActiveRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "superadmin")),
+):
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot change own active status")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.is_active = body.is_active
     await db.flush()
     await db.refresh(user)
 
