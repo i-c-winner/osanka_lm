@@ -7,9 +7,9 @@ import { alpha }  from "@mui/material/styles";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import AddIcon               from "@mui/icons-material/Add";
 import { brand }       from "@/shared/theme";
-import { StatsCards }  from "./StatsCards";
-import { MonthCalendar } from "./MonthCalendar";
-import { TodayPanel }  from "./TodayPanel";
+import { StatsCards }   from "@/entities/stats/ui/StatsCards";
+import { MonthCalendar } from "@/entities/calendar/ui/MonthCalendar";
+import { TodayPanel }   from "@/entities/today/ui/TodayPanel";
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
