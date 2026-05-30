@@ -33,6 +33,7 @@ import { SessionsTab } from "@/features/sessions/ui/SessionsTab";
 import { MONTH_RU, DOW_RU, toISO, buildGrid } from "@/shared/lib/calendar";
 import { MonthCalendar } from "@/entities/calendar";
 import { useAdminCalendarDays, DaySessionsModal } from "@/features/superadmin-calendar";
+import { OfflinePlansTab } from "@/features/offline-plans";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -733,12 +734,13 @@ function DashboardsTab() {
 // ─── Страница ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { label: "Users",      component: <UsersTab />      },
-  { label: "Locale",     component: <LocaleTab />     },
-  { label: "Сессии",     component: <SessionsTab />   },
-  { label: "Дни",        component: <DaysTab />       },
-  { label: "Календарь",  component: <CalendarTab />   },
-  { label: "Dashboards", component: <DashboardsTab /> },
+  { label: "Users",           component: <UsersTab />         },
+  { label: "Locale",          component: <LocaleTab />        },
+  { label: "Сессии",          component: <SessionsTab />      },
+  { label: "Дни",             component: <DaysTab />          },
+  { label: "Планы офлайн",    component: <OfflinePlansTab />  },
+  { label: "Календарь",       component: <CalendarTab />      },
+  { label: "Dashboards",      component: <DashboardsTab />    },
 ];
 
 export default function SuperAdminPage() {

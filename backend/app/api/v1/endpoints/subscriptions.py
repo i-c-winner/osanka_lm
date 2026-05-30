@@ -32,10 +32,8 @@ async def create_subscription(
     started_at = datetime.now(timezone.utc)
 
     if plan.is_calendar_month:
-        month = started_at.month % 12 + 1
-        year = started_at.year + (1 if started_at.month == 12 else 0)
-        day = min(started_at.day, calendar.monthrange(year, month)[1])
-        expires_at = started_at.replace(year=year, month=month, day=day)
+        last_day = calendar.monthrange(started_at.year, started_at.month)[1]
+        expires_at = started_at.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
     elif plan.duration_days:
         expires_at = started_at + timedelta(days=plan.duration_days)
     else:
