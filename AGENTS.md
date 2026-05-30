@@ -3,7 +3,7 @@
 ## Обзор Workspace
 
 - Корень репозитория является контейнером рабочего пространства для backend и frontend.
-- Основной backend-код находится в `backand/`.
+- Основной backend-код находится в `backend/`.
 - Каталог `frontend/` зарезервирован под frontend-приложение и сейчас еще не заполнен кодом.
 - Каталог `assets/` содержит проектные ассеты и вспомогательные материалы, а не runtime-код приложения.
 
@@ -11,12 +11,12 @@
 
 - Перед изменениями сначала изучай существующую структуру и текущий код.
 - Держи изменения локальными и целевыми; не расширяй область правок без необходимости.
-- Не переименовывай `backand/` в `backend/`, если это явно не запрошено.
+- Не переименовывай `backend/` в `backend/`, если это явно не запрошено.
 - Если задача не требует изменений на уровне всего workspace, старайся не затрагивать корень репозитория.
 
 ## Структура Проекта
 
-- Backend root: `backand/`
+- Backend root: `backend/`
 - Frontend root: `frontend/`
 - Assets: `assets/`
 
@@ -33,17 +33,17 @@
 
 ## Backend-Структура
 
-- Точка входа FastAPI-приложения: `backand/app/main.py`
-- API-роуты: `backand/app/api/routes/`
-- Зависимости и DI: `backand/app/api/deps.py`
-- Конфигурация: `backand/app/core/config.py`
-- Модели SQLAlchemy: `backand/app/models/`
-- Pydantic-схемы и DTO: `backand/app/schemas/`
-- Бизнес-логика: `backand/app/services/`
-- Работа с БД и Redis: `backand/app/db/`
-- Фоновые задачи: `backand/app/tasks/`
-- Миграции: `backand/alembic/`
-- Тесты: `backand/tests/`
+- Точка входа FastAPI-приложения: `backend/app/main.py`
+- API-роуты: `backend/app/api/routes/`
+- Зависимости и DI: `backend/app/api/deps.py`
+- Конфигурация: `backend/app/core/config.py`
+- Модели SQLAlchemy: `backend/app/models/`
+- Pydantic-схемы и DTO: `backend/app/schemas/`
+- Бизнес-логика: `backend/app/services/`
+- Работа с БД и Redis: `backend/app/db/`
+- Фоновые задачи: `backend/app/tasks/`
+- Миграции: `backend/alembic/`
+- Тесты: `backend/tests/`
 
 ## Backend-Конвенции
 
@@ -84,25 +84,25 @@
 - Учитывай, что разрешение `.env` зависит от рабочей директории процесса.
 - Для backend по умолчанию ожидаются локальные сервисы `PostgreSQL` и `Redis`.
 - К чувствительным настройкам относятся webhook secrets, cookie settings, session TTL и параметры подключения к БД/Redis.
-- При запуске backend-команд предпочтительно работать из `backand/`.
+- При запуске backend-команд предпочтительно работать из `backend/`.
 
 ## Тестирование
 
-- Backend-тесты находятся в `backand/tests/`.
+- Backend-тесты находятся в `backend/tests/`.
 - При изменении моделей, сервисов, auth, payments, access, sessions или orders обновляй или добавляй pytest-покрытие.
 - Сохраняй совместимость тестового слоя при изменении DB-dependent логики.
 - Если меняется async DB-слой, следи за согласованностью тестового harness и фикстур.
 
 ## Практические Команды
 
-- Установить backend-зависимости из `backand/`: `pip install -e .[dev]`
-- Запустить backend из `backand/`: `uvicorn app.main:app --reload`
-- Запустить миграции из `backand/`: `alembic upgrade head`
-- Запустить backend-тесты из `backand/`: `pytest`
+- Установить backend-зависимости из `backend/`: `pip install -e .[dev]`
+- Запустить backend из `backend/`: `uvicorn app.main:app --reload`
+- Запустить миграции из `backend/`: `alembic upgrade head`
+- Запустить backend-тесты из `backend/`: `pytest`
 
 ## Ожидания От Агента
 
-- Если задача касается backend, считай `backand/` основным рабочим корнем.
+- Если задача касается backend, считай `backend/` основным рабочим корнем.
 - Если задача касается frontend, считай `frontend/` основным рабочим корнем.
 - Если в задаче приложение упоминается в общем виде без уточнений, сначала определяй контекст по формулировке задачи и текущей структуре workspace.
 - Сохраняй текущий стиль проекта и существующие границы модулей.

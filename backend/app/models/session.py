@@ -12,7 +12,12 @@ class Session(Base):
     __table_args__ = {"schema": "offline"}
 
     id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    day_id        = Column(UUID(as_uuid=True), nullable=False, index=True)
+    day_id        = Column(
+        UUID(as_uuid=True),
+        ForeignKey("offline.days.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     starts_at     = Column(DateTime(timezone=True), nullable=False)
     ends_at       = Column(DateTime(timezone=True), nullable=False)
     trainer_id    = Column(UUID(as_uuid=True), nullable=True, index=True)
@@ -26,6 +31,7 @@ class Session(Base):
         index=True,
     )
 
+    day          = relationship("Day", foreign_keys=[day_id], viewonly=True)
     location     = relationship(
         "Location",
         primaryjoin="Session.location_id == foreign(Location.id)",
