@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Box from "@mui/material/Box";
+import Drawer from "@mui/material/Drawer";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
 import { alpha } from "@mui/material/styles";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import FormatListBulletedIcon   from "@mui/icons-material/FormatListBulleted";
@@ -12,6 +14,8 @@ import BookmarkBorderIcon       from "@mui/icons-material/BookmarkBorder";
 import CheckCircleOutlineIcon   from "@mui/icons-material/CheckCircleOutline";
 import SettingsOutlinedIcon     from "@mui/icons-material/SettingsOutlined";
 import FavoriteIcon             from "@mui/icons-material/Favorite";
+import MenuIcon                 from "@mui/icons-material/Menu";
+import CloseIcon                from "@mui/icons-material/Close";
 import { brand }                from "@/shared/theme";
 import { CalendarView }         from "@/entities/calendar";
 
@@ -21,13 +25,18 @@ type NavKey = "calendar" | "programs" | "sessions" | "favorites" | "progress" | 
 interface NavItem { key: NavKey; label: string; icon: React.ReactNode; count?: number }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: "calendar",  label: "Календарь",     icon: <CalendarMonthOutlinedIcon sx={{ fontSize: 18 }} /> },
-  { key: "programs",  label: "Мои программы", icon: <FormatListBulletedIcon    sx={{ fontSize: 18 }} />, count: 3   },
+  { key: "calendar",  label: "Календарь",      icon: <CalendarMonthOutlinedIcon sx={{ fontSize: 18 }} /> },
+  { key: "programs",  label: "Мои программы",  icon: <FormatListBulletedIcon    sx={{ fontSize: 18 }} />, count: 3   },
   { key: "sessions",  label: "Offline занятия", icon: <FitnessCenterIcon         sx={{ fontSize: 18 }} />, count: 182 },
-  { key: "favorites", label: "Избранное",     icon: <BookmarkBorderIcon        sx={{ fontSize: 18 }} />, count: 12  },
-  { key: "progress",  label: "Прогресс",      icon: <CheckCircleOutlineIcon    sx={{ fontSize: 18 }} /> },
-  { key: "settings",  label: "Настройки",     icon: <SettingsOutlinedIcon      sx={{ fontSize: 18 }} /> },
+  { key: "favorites", label: "Избранное",      icon: <BookmarkBorderIcon        sx={{ fontSize: 18 }} />, count: 12  },
+  { key: "progress",  label: "Прогресс",       icon: <CheckCircleOutlineIcon    sx={{ fontSize: 18 }} /> },
+  { key: "settings",  label: "Настройки",      icon: <SettingsOutlinedIcon      sx={{ fontSize: 18 }} /> },
 ];
+
+const SECTION_LABELS: Record<NavKey, string> = {
+  calendar: "Календарь", programs: "Мои программы", sessions: "Offline занятия",
+  favorites: "Избранное", progress: "Прогресс", settings: "Настройки",
+};
 
 // ─── Карточка эфира ───────────────────────────────────────────────────────────
 
@@ -65,17 +74,17 @@ function LiveCard() {
   );
 }
 
-// ─── Aside ────────────────────────────────────────────────────────────────────
+// ─── Содержимое боковой панели ────────────────────────────────────────────────
 
-function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => void }) {
+function AsideContent({
+  active,
+  onChange,
+}: {
+  active: NavKey;
+  onChange: (k: NavKey) => void;
+}) {
   return (
-    <Box component="aside" sx={{
-      width: { md: "280px", lg: "300px" }, flexShrink: 0,
-      position: "sticky", top: "80px",
-      height: "calc(100vh - 96px)",
-      display: "flex", flexDirection: "column", gap: "8px",
-      overflowY: "auto", pb: "24px",
-    }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "8px", height: "100%" }}>
       {/* Приветствие */}
       <Box sx={{ mb: "8px" }}>
         <Typography className="eyebrow" sx={{ display: "block", mb: "6px" }}>С возвращением</Typography>
@@ -120,8 +129,107 @@ function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => 
         })}
       </Box>
 
-      <LiveCard />
+      <Box sx={{ mt: "auto" }}>
+        <LiveCard />
+      </Box>
     </Box>
+  );
+}
+
+// ─── Десктопный Aside ─────────────────────────────────────────────────────────
+
+function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => void }) {
+  return (
+    <Box component="aside" sx={{
+      width: { md: "280px", lg: "300px" }, flexShrink: 0,
+      display: { xs: "none", md: "flex" },
+      flexDirection: "column",
+      position: "sticky", top: "80px",
+      height: "calc(100vh - 96px)",
+      overflowY: "auto", pb: "24px",
+    }}>
+      <AsideContent active={active} onChange={onChange} />
+    </Box>
+  );
+}
+
+// ─── Мобильный бургер + Drawer ────────────────────────────────────────────────
+
+function MobileNav({
+  active,
+  onChange,
+}: {
+  active: NavKey;
+  onChange: (k: NavKey) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  function handleSelect(key: NavKey) {
+    onChange(key);
+    setOpen(false);
+  }
+
+  return (
+    <>
+      {/* Топ-бар с бургером */}
+      <Box sx={{
+        display: { xs: "flex", md: "none" },
+        alignItems: "center", justifyContent: "space-between",
+        mb: "20px",
+        px: "4px",
+      }}>
+        <Box>
+          <Typography className="eyebrow" sx={{ display: "block", mb: "2px" }}>С возвращением</Typography>
+          <Typography sx={{
+            fontFamily: "var(--font-display)", fontWeight: 400,
+            fontSize: "22px", lineHeight: 1.1, color: brand.cocoa,
+          }}>
+            {SECTION_LABELS[active]}
+          </Typography>
+        </Box>
+        <IconButton
+          onClick={() => setOpen(true)}
+          sx={{
+            width: 40, height: 40, borderRadius: "12px",
+            border: `1px solid ${alpha(brand.line, 0.8)}`,
+            color: brand.cocoa,
+            "&:hover": { backgroundColor: alpha(brand.line, 0.4) },
+          }}
+        >
+          <MenuIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Box>
+
+      {/* Drawer */}
+      <Drawer
+        anchor="left"
+        open={open}
+        onClose={() => setOpen(false)}
+        PaperProps={{
+          sx: {
+            width: "300px",
+            backgroundColor: brand.ivory,
+            borderRight: `1px solid ${alpha(brand.line, 0.6)}`,
+            p: "24px",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        {/* Шапка drawer */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", mb: "16px" }}>
+          <IconButton
+            onClick={() => setOpen(false)}
+            size="small"
+            sx={{ color: brand.cocoaSoft, "&:hover": { backgroundColor: alpha(brand.line, 0.4) } }}
+          >
+            <CloseIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Box>
+
+        <AsideContent active={active} onChange={handleSelect} />
+      </Drawer>
+    </>
   );
 }
 
@@ -129,13 +237,9 @@ function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => 
 
 function MainContent({ section }: { section: NavKey }) {
   if (section === "calendar") return <CalendarView />;
-  const labels: Record<NavKey, string> = {
-    calendar: "Календарь", programs: "Мои программы", sessions: "Offline занятия",
-    favorites: "Избранное", progress: "Прогресс", settings: "Настройки",
-  };
   return (
     <Box component="main" sx={{ flex: 1, minWidth: 0, pt: "8px" }}>
-      <Typography variant="h3" sx={{ mb: "8px" }}>{labels[section]}</Typography>
+      <Typography variant="h3" sx={{ mb: "8px" }}>{SECTION_LABELS[section]}</Typography>
       <Typography variant="body1" sx={{ color: brand.cocoaSoft }}>Раздел в разработке.</Typography>
     </Box>
   );
@@ -145,14 +249,29 @@ function MainContent({ section }: { section: NavKey }) {
 
 export default function MySpacePage() {
   const [activeSection, setActiveSection] = useState<NavKey>("calendar");
+
   return (
     <Box sx={{
       maxWidth: "1200px", mx: "auto",
-      px: { xs: 2, sm: 3, md: 4 }, py: { xs: "32px", md: "48px" },
-      display: "flex", gap: { md: "48px", lg: "64px" }, alignItems: "flex-start",
+      px: { xs: 2, sm: 3, md: 4 }, py: { xs: "24px", md: "48px" },
     }}>
-      <Aside active={activeSection} onChange={setActiveSection} />
-      <MainContent section={activeSection} />
+      {/* Мобильный бургер (скрыт на md+) */}
+      <MobileNav active={activeSection} onChange={setActiveSection} />
+
+      {/* Основной layout */}
+      <Box sx={{
+        display: "flex",
+        gap: { md: "48px", lg: "64px" },
+        alignItems: "flex-start",
+      }}>
+        {/* Десктопный сайдбар (скрыт на xs) */}
+        <Aside active={activeSection} onChange={setActiveSection} />
+
+        {/* Контент */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <MainContent section={activeSection} />
+        </Box>
+      </Box>
     </Box>
   );
 }
