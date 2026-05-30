@@ -13,7 +13,7 @@ import CheckCircleOutlineIcon   from "@mui/icons-material/CheckCircleOutline";
 import SettingsOutlinedIcon     from "@mui/icons-material/SettingsOutlined";
 import FavoriteIcon             from "@mui/icons-material/Favorite";
 import { brand }                from "@/shared/theme";
-import { CalendarView }         from "./_components/CalendarView";
+import { CalendarView }         from "@/entities/calendar";
 
 // ─── Типы ─────────────────────────────────────────────────────────────────────
 

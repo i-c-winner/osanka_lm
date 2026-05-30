@@ -5,12 +5,12 @@ from pydantic import BaseModel
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_role
+from app.api.deps import get_current_user, get_user_roles, require_role
 from app.db.session import get_db
 from app.models.role import Role
 from app.models.user import User
 from app.models.user_role import UserRole
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import MeResponse, UserCreate, UserResponse
 
 router = APIRouter()
 
@@ -19,6 +19,15 @@ DEFAULT_ROLE = "client"
 
 class ChangeRoleRequest(BaseModel):
     role: str
+
+
+@router.get("/me", response_model=MeResponse)
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    roles = await get_user_roles(current_user, db)
+    return MeResponse.model_validate({**current_user.__dict__, "roles": roles})
 
 
 @router.post("/", response_model=UserResponse, status_code=201)

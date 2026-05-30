@@ -15,6 +15,10 @@ export interface AuthResponse {
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
+export interface MeResponse extends UserResponse {
+  roles: string[];
+}
+
 export interface UserResponse {
   id: string;
   telegram_id: string;
