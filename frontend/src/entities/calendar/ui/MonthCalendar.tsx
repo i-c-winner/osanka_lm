@@ -96,15 +96,17 @@ const MONTH_NAMES_RU = [
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface MonthCalendarProps {
-  getDayData: GetDayData;
+  getDayData:   GetDayData;
+  onDayClick?:  (dateKey: string) => void;
 }
 
 // ─── MonthCalendar ────────────────────────────────────────────────────────────
 
-export function MonthCalendar({ getDayData }: MonthCalendarProps) {
+export function MonthCalendar({ getDayData, onDayClick }: MonthCalendarProps) {
   const calRef        = useRef<HTMLDivElement>(null);
   const calInstance   = useRef<Calendar | null>(null);
   const getDayDataRef = useRef<GetDayData>(getDayData);
+  const onDayClickRef = useRef(onDayClick);
   const [view, setView]   = useState<"week" | "month">("month");
   const today = new Date();
   const [title, setTitle] = useState<{ month: string; year: string }>({
@@ -112,8 +114,9 @@ export function MonthCalendar({ getDayData }: MonthCalendarProps) {
     year:  String(today.getFullYear()),
   });
 
-  // Всегда держим ref актуальным
+  // Всегда держим refs актуальными
   getDayDataRef.current = getDayData;
+  onDayClickRef.current = onDayClick;
 
   function updateTitle(cal: Calendar) {
     const d = cal.getDate();
@@ -128,6 +131,11 @@ export function MonthCalendar({ getDayData }: MonthCalendarProps) {
 
     const frame = arg.el.querySelector(".fc-daygrid-day-frame") as HTMLElement | null;
     if (!frame) return;
+
+    if (!isOther && onDayClickRef.current) {
+      frame.style.cursor = "pointer";
+      frame.onclick = () => onDayClickRef.current?.(key);
+    }
 
     frame.innerHTML = "";
 

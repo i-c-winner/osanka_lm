@@ -26,13 +26,15 @@ function buildDayData(sessions: SessionResponse[]): DayData {
 
 interface AdminCalendarState {
   getDayData: GetDayData;
+  sessionsByDate: Record<string, SessionResponse[]>;
   loading: boolean;
   error: string | null;
   reload: () => void;
 }
 
 export function useAdminCalendarDays(): AdminCalendarState {
-  const [dayMap, setDayMap] = useState<Record<string, DayData>>({});
+  const [dayMap,          setDayMap]          = useState<Record<string, DayData>>({});
+  const [sessionsByDate,  setSessionsByDate]  = useState<Record<string, SessionResponse[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
 
@@ -69,6 +71,7 @@ export function useAdminCalendarDays(): AdminCalendarState {
       }
 
       setDayMap(result);
+      setSessionsByDate(sessionsByDate);
     } catch (e) {
       setError("Не удалось загрузить данные календаря");
       console.error(e);
@@ -84,5 +87,5 @@ export function useAdminCalendarDays(): AdminCalendarState {
     [dayMap],
   );
 
-  return { getDayData, loading, error, reload: load };
+  return { getDayData, sessionsByDate, loading, error, reload: load };
 }

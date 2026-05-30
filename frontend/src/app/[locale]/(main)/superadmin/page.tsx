@@ -32,7 +32,7 @@ import type { MeResponse, LocationResponse, DayResponse } from "@/shared/api";
 import { SessionsTab } from "@/features/sessions/ui/SessionsTab";
 import { MONTH_RU, DOW_RU, toISO, buildGrid } from "@/shared/lib/calendar";
 import { MonthCalendar } from "@/entities/calendar";
-import { useAdminCalendarDays } from "@/features/superadmin-calendar";
+import { useAdminCalendarDays, DaySessionsModal } from "@/features/superadmin-calendar";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -668,7 +668,8 @@ function DaysTab() {
 // ─── Вкладка «Календарь» ─────────────────────────────────────────────────────
 
 function CalendarTab() {
-  const { getDayData, loading, error, reload } = useAdminCalendarDays();
+  const { getDayData, sessionsByDate, loading, error, reload } = useAdminCalendarDays();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -700,7 +701,20 @@ function CalendarTab() {
     );
   }
 
-  return <MonthCalendar getDayData={getDayData} />;
+  return (
+    <>
+      <MonthCalendar
+        getDayData={getDayData}
+        onDayClick={(dateKey) => setSelectedDate(dateKey)}
+      />
+      <DaySessionsModal
+        open={!!selectedDate}
+        dateKey={selectedDate}
+        sessions={selectedDate ? (sessionsByDate[selectedDate] ?? []) : []}
+        onClose={() => setSelectedDate(null)}
+      />
+    </>
+  );
 }
 
 function DashboardsTab() {
