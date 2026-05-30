@@ -21,8 +21,11 @@ import { brand } from "@/shared/theme";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
+import Modal from "@mui/material/Modal";
+import Fade from "@mui/material/Fade";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import { useMe } from "@/features/me/model/useMe";
 import { usersApi, locationsApi, sessionsApi, daysApi } from "@/shared/api";
 import type { MeResponse, LocationResponse, SessionResponse, DayResponse } from "@/shared/api";
@@ -404,14 +407,252 @@ function shortId(id: string | null | undefined) {
   return id ? id.slice(0, 8) + "…" : "—";
 }
 
+// ─── Модалка создания сессии ──────────────────────────────────────────────────
+
+interface CreateSessionModalProps {
+  open: boolean;
+  onClose: () => void;
+  availableDays: DayResponse[];
+  locations: LocationResponse[];
+  trainers: MeResponse[];
+  onCreated: (s: SessionResponse) => void;
+}
+
+function CreateSessionModal({ open, onClose, availableDays, locations, trainers, onCreated }: CreateSessionModalProps) {
+  const now = new Date();
+  const [step, setStep] = useState<"calendar" | "form">("calendar");
+  const [calYear,  setCalYear]  = useState(now.getFullYear());
+  const [calMonth, setCalMonth] = useState(now.getMonth());
+  const [selectedDay, setSelectedDay] = useState<DayResponse | null>(null);
+  const [form, setForm] = useState({ startTime: "09:00", endTime: "10:00", capacity: "10", status: "active", location_id: "", trainer_id: "" });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) { setStep("calendar"); setSelectedDay(null); setError(null); }
+  }, [open]);
+
+  const availableSet = useMemo(
+    () => new Map(availableDays.map((d) => [d.date, d])),
+    [availableDays],
+  );
+
+  function set(k: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm(f => ({ ...f, [k]: e.target.value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedDay) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await sessionsApi.create({
+        day_id:      selectedDay.id,
+        starts_at:   `${selectedDay.date}T${form.startTime}:00`,
+        ends_at:     `${selectedDay.date}T${form.endTime}:00`,
+        capacity:    Number(form.capacity),
+        status:      form.status,
+        location_id: form.location_id || undefined,
+        trainer_id:  form.trainer_id  || undefined,
+      });
+      onCreated(created);
+      onClose();
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number; data?: { detail?: { code?: string; starts_at?: string; ends_at?: string; message?: string } } } })?.response;
+      if (status?.status === 409 && status.data?.detail?.code === "session_conflict") {
+        const d = status.data.detail;
+        const from = d.starts_at ? new Date(d.starts_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "";
+        const to   = d.ends_at   ? new Date(d.ends_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "";
+        setError(`Сессия занята: на этой локации уже есть занятие ${from}–${to}`);
+      } else {
+        setError("Ошибка при создании сессии");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const grid = buildGrid(calYear, calMonth);
+  const inputSx = { "& .MuiInputBase-input": { fontFamily: "var(--font-body)", fontSize: "13px" } };
+
+  return (
+    <Modal open={open} onClose={onClose} closeAfterTransition>
+      <Fade in={open}>
+        <Box sx={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: { xs: "95vw", sm: step === "calendar" ? 420 : 440 },
+          backgroundColor: brand.ivory,
+          borderRadius: "22px",
+          border: `1px solid ${alpha(brand.line, 0.7)}`,
+          boxShadow: `0 24px 64px -16px ${alpha(brand.cocoa, 0.25)}`,
+          p: "28px", outline: "none",
+          maxHeight: "90vh", overflowY: "auto",
+        }}>
+          {/* Шапка */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "16px" }}>
+            <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "20px", fontWeight: 400, color: brand.cocoa }}>
+              {step === "calendar" ? "Выберите день" : "Новая сессия"}
+            </Typography>
+            <IconButton size="small" onClick={onClose} sx={{ color: brand.mute }}>
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+
+          {step === "calendar" ? (
+            <>
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute, mb: "16px" }}>
+                Доступны только дни из таблицы расписания
+              </Typography>
+
+              {/* Навигация */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "12px" }}>
+                <Box onClick={() => { if (calMonth === 0) { setCalYear(y => y-1); setCalMonth(11); } else setCalMonth(m => m-1); }}
+                  sx={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${alpha(brand.line,0.8)}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { backgroundColor: alpha(brand.line,0.4) } }}>
+                  <Typography sx={{ fontSize: "14px", color: brand.cocoa, lineHeight: 1 }}>‹</Typography>
+                </Box>
+                <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "17px", color: brand.cocoa }}>
+                  {MONTH_RU[calMonth]} {calYear}
+                </Typography>
+                <Box onClick={() => { if (calMonth === 11) { setCalYear(y => y+1); setCalMonth(0); } else setCalMonth(m => m+1); }}
+                  sx={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${alpha(brand.line,0.8)}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { backgroundColor: alpha(brand.line,0.4) } }}>
+                  <Typography sx={{ fontSize: "14px", color: brand.cocoa, lineHeight: 1 }}>›</Typography>
+                </Box>
+              </Box>
+
+              {/* Дни недели */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", mb: "4px" }}>
+                {DOW_RU.map((d) => (
+                  <Typography key={d} sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, color: brand.mute, textAlign: "center", py: "4px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    {d}
+                  </Typography>
+                ))}
+              </Box>
+
+              {/* Сетка */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px" }}>
+                {grid.map((date, i) => {
+                  if (!date) return <Box key={i} />;
+                  const iso = toISO(date);
+                  const dayRecord = availableSet.get(iso);
+                  const isAvailable = !!dayRecord;
+                  const isToday = iso === toISO(now);
+                  const isSelected = selectedDay?.date === iso;
+                  return (
+                    <Box key={iso}
+                      onClick={() => isAvailable && dayRecord && setSelectedDay(dayRecord)}
+                      sx={{
+                        height: 40, borderRadius: "10px",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px",
+                        cursor: isAvailable ? "pointer" : "default",
+                        backgroundColor: isSelected ? brand.terracotta : isAvailable ? alpha(brand.cocoa, 0.08) : "transparent",
+                        border: isToday ? `1px solid ${brand.terracotta}` : "1px solid transparent",
+                        transition: "all 0.12s ease",
+                        "&:hover": isAvailable && !isSelected ? { backgroundColor: alpha(brand.cocoa, 0.15) } : {},
+                      }}>
+                      <Typography sx={{
+                        fontFamily: "var(--font-body)", fontSize: "13px",
+                        fontWeight: isAvailable ? 600 : 400,
+                        color: isSelected ? "#fff" : isAvailable ? brand.cocoa : alpha(brand.cocoa, 0.22),
+                        lineHeight: 1,
+                      }}>
+                        {date.getDate()}
+                      </Typography>
+                      {isAvailable && !isSelected && (
+                        <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: brand.terracotta }} />
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+
+              <Button
+                fullWidth variant="contained"
+                disabled={!selectedDay}
+                onClick={() => setStep("form")}
+                sx={{ mt: "20px", backgroundColor: brand.cocoa, color: brand.ivory, borderRadius: "10px", fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: brand.cocoaSoft, boxShadow: "none" } }}
+              >
+                {selectedDay
+                  ? `Далее → ${new Date(selectedDay.date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}`
+                  : "Выберите день"}
+              </Button>
+            </>
+          ) : (
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Выбранный день */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: "10px 14px", borderRadius: "12px", backgroundColor: alpha(brand.cocoa, 0.06) }}>
+                <Box>
+                  <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, color: brand.mute, letterSpacing: "0.1em", textTransform: "uppercase", mb: "2px" }}>
+                    День занятия
+                  </Typography>
+                  <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "14px", fontWeight: 600, color: brand.cocoa }}>
+                    {selectedDay && new Date(selectedDay.date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
+                  </Typography>
+                </Box>
+                <Button size="small" onClick={() => setStep("calendar")} sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.terracottaDeep, textTransform: "none" }}>
+                  Изменить
+                </Button>
+              </Box>
+
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <TextField label="Начало" type="time" value={form.startTime} onChange={set("startTime")} size="small" required sx={inputSx} InputLabelProps={{ shrink: true }} />
+                <TextField label="Конец"  type="time" value={form.endTime}   onChange={set("endTime")}   size="small" required sx={inputSx} InputLabelProps={{ shrink: true }} />
+              </Box>
+
+              <TextField label="Вместимость" type="number" value={form.capacity} onChange={set("capacity")} size="small" required inputProps={{ min: 1 }} sx={inputSx} />
+
+              <Select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))} size="small" displayEmpty sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
+                {["active","completed","cancelled"].map((s) => (
+                  <MenuItem key={s} value={s} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>{s}</MenuItem>
+                ))}
+              </Select>
+
+              <Select value={form.trainer_id} onChange={(e) => setForm(f => ({ ...f, trainer_id: e.target.value }))} size="small" displayEmpty sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
+                <MenuItem value="" sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute }}>Без тренера</MenuItem>
+                {trainers.map((t) => {
+                  const name = [t.first_name, t.last_name].filter(Boolean).join(" ") || t.telegram_username || t.telegram_id;
+                  return <MenuItem key={t.id} value={t.id} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>{name}</MenuItem>;
+                })}
+              </Select>
+
+              <Select value={form.location_id} onChange={(e) => setForm(f => ({ ...f, location_id: e.target.value }))} size="small" displayEmpty sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
+                <MenuItem value="" sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute }}>Без локации</MenuItem>
+                {locations.map((l) => (
+                  <MenuItem key={l.id} value={l.id} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>{l.name}</MenuItem>
+                ))}
+              </Select>
+
+              {error && <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.terracotta }}>{error}</Typography>}
+
+              <Button type="submit" variant="contained" disabled={saving}
+                startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
+                sx={{ backgroundColor: brand.cocoa, color: brand.ivory, borderRadius: "10px", fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: brand.cocoaSoft, boxShadow: "none" } }}>
+                Создать сессию
+              </Button>
+            </Box>
+          )}
+        </Box>
+      </Fade>
+    </Modal>
+  );
+}
+
+// ─── SessionsTab ──────────────────────────────────────────────────────────────
+
 function SessionsTab() {
   const [sessions,    setSessions]    = useState<SessionResponse[]>([]);
   const [locationMap, setLocationMap] = useState<Record<string, string>>({});
   const [trainerMap,  setTrainerMap]  = useState<Record<string, string>>({});
-  const [dayMap,      setDayMap]      = useState<Record<string, string>>({});  // id → "DD.MM.YYYY"
+  const [dayMap,      setDayMap]      = useState<Record<string, string>>({});
+  const [locations,   setLocations]   = useState<LocationResponse[]>([]);
+  const [trainers,    setTrainers]    = useState<MeResponse[]>([]);
+  const [availableDays, setAvailableDays] = useState<DayResponse[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -423,20 +664,22 @@ function SessionsTab() {
         usersApi.getAll(),
       ]);
       setSessions(data);
+      setLocations(locs);
       setLocationMap(Object.fromEntries(locs.map((l) => [l.id, l.name])));
+      setAvailableDays(days);
       setDayMap(Object.fromEntries(
         days.map((d) => [
           d.id,
           new Date(d.date + "T00:00:00").toLocaleDateString("ru-RU", { day: "2-digit", month: "short", year: "numeric" }),
         ])
       ));
+      const trainerList = users.filter((u) => u.roles.includes("trainer"));
+      setTrainers(trainerList);
       setTrainerMap(Object.fromEntries(
-        users
-          .filter((u) => u.roles.includes("trainer"))
-          .map((u) => [
-            u.id,
-            [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || u.telegram_id,
-          ])
+        trainerList.map((u) => [
+          u.id,
+          [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || u.telegram_id,
+        ])
       ));
     } finally {
       setLoading(false);
@@ -465,6 +708,16 @@ function SessionsTab() {
     }
   }
 
+  async function handleTrainerChange(id: string, trainer_id: string) {
+    setUpdating(id);
+    try {
+      const updated = await sessionsApi.update(id, { trainer_id: trainer_id || undefined });
+      setSessions((prev) => prev.map((s) => s.id === updated.id ? { ...s, trainer_id: updated.trainer_id } : s));
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: "40px" }}>
@@ -477,12 +730,31 @@ function SessionsTab() {
 
   return (
     <Box>
-      <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: brand.cocoa, mb: "20px" }}>
-        Сессии{" "}
-        <Box component="span" sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute, fontWeight: 400 }}>
-          ({sessions.length})
-        </Box>
-      </Typography>
+      <CreateSessionModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        availableDays={availableDays}
+        locations={locations}
+        trainers={trainers}
+        onCreated={(s) => { setSessions(prev => [s, ...prev]); }}
+      />
+
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "20px", flexWrap: "wrap", gap: "12px" }}>
+        <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: brand.cocoa }}>
+          Сессии{" "}
+          <Box component="span" sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute, fontWeight: 400 }}>
+            ({sessions.length})
+          </Box>
+        </Typography>
+        <Button
+          onClick={() => setCreateOpen(true)}
+          variant="contained"
+          startIcon={<AddIcon />}
+          sx={{ backgroundColor: brand.cocoa, color: brand.ivory, borderRadius: "10px", fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: brand.cocoaSoft, boxShadow: "none" } }}
+        >
+          Добавить сессию
+        </Button>
+      </Box>
 
       <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflow: "hidden" }}>
         <Table size="small">
@@ -555,11 +827,31 @@ function SessionsTab() {
                   </TableCell>
 
                   {/* Тренер */}
-                  <TableCell sx={CELL_SX}>
-                    {s.trainer_id
-                      ? (trainerMap[s.trainer_id] ?? shortId(s.trainer_id))
-                      : <Box component="span" sx={{ color: brand.mute }}>—</Box>
-                    }
+                  <TableCell sx={{ ...CELL_SX, minWidth: 150 }}>
+                    <Select
+                      value={s.trainer_id ?? ""}
+                      disabled={isUpdating || isDeleting}
+                      onChange={(e) => handleTrainerChange(s.id, e.target.value)}
+                      size="small"
+                      displayEmpty
+                      variant="outlined"
+                      sx={{
+                        fontFamily: "var(--font-body)", fontSize: "12px", color: brand.cocoa,
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: alpha(brand.line, 0.8) },
+                        "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: brand.cocoa },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: brand.terracotta },
+                        "& .MuiSelect-select": { py: "4px", px: "10px" },
+                      }}
+                    >
+                      <MenuItem value="" sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute }}>
+                        Без тренера
+                      </MenuItem>
+                      {trainers.map((t) => (
+                        <MenuItem key={t.id} value={t.id} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
+                          {trainerMap[t.id] ?? t.telegram_id}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   </TableCell>
 
                   {/* Дата занятия */}
