@@ -8,45 +8,8 @@ import { brand }   from "@/shared/theme";
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import type { DayCellMountArg } from "@fullcalendar/core";
-
-// ─── Данные дней ─────────────────────────────────────────────────────────────
-
-type SessionBar = "practice" | "mobility" | "live";
-
-interface DayData {
-  isDone?: boolean;
-  isLive?: boolean;
-  bars: SessionBar[];
-}
-
-const BAR_COLOR: Record<SessionBar, string> = {
-  practice: brand.terracotta,
-  mobility: brand.sage,
-  live:     brand.gold,
-};
-
-const DAY_MAP: Record<string, DayData> = {
-  "2026-11-02": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-03": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-05": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-06": { isDone: true, isLive: true, bars: ["practice"] },
-  "2026-11-07": { isDone: true, bars: ["practice"] },
-  "2026-11-09": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-10": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-11": { bars: ["practice"] },
-  "2026-11-12": { bars: ["practice"] },
-  "2026-11-13": { isLive: true, bars: ["live"] },
-  "2026-11-17": { bars: ["mobility"] },
-  "2026-11-20": { isLive: true, bars: ["live"] },
-  "2026-11-27": { isLive: true, bars: ["live"] },
-};
-
-function toKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import type { GetDayData } from "@/entities/calendar/model/types";
+import { BAR_COLOR } from "@/entities/calendar/model/barColors";
 
 // ─── CSS-переопределения FullCalendar ──────────────────────────────────────────
 
@@ -116,39 +79,54 @@ const FC_STYLES = `
   }
 `;
 
+// ─── Утилиты ──────────────────────────────────────────────────────────────────
+
+function toKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+const MONTH_NAMES_RU = [
+  "Январь","Февраль","Март","Апрель","Май","Июнь",
+  "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь",
+];
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface MonthCalendarProps {
+  getDayData: GetDayData;
+}
+
 // ─── MonthCalendar ────────────────────────────────────────────────────────────
 
-export function MonthCalendar() {
-  const calRef     = useRef<HTMLDivElement>(null);
+export function MonthCalendar({ getDayData }: MonthCalendarProps) {
+  const calRef      = useRef<HTMLDivElement>(null);
   const calInstance = useRef<Calendar | null>(null);
   const [view, setView]   = useState<"week" | "month">("month");
   const [title, setTitle] = useState<{ month: string; year: string }>({ month: "Ноябрь", year: "2026" });
-
-  const MONTH_NAMES_RU = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 
   function updateTitle(cal: Calendar) {
     const d = cal.getDate();
     setTitle({ month: MONTH_NAMES_RU[d.getMonth()], year: String(d.getFullYear()) });
   }
 
-  // Рендер содержимого ячейки через DOM
   function renderDayCell(arg: DayCellMountArg) {
-    const key      = toKey(arg.date);
-    const data     = DAY_MAP[key];
-    const isToday  = arg.el.closest(".fc-day-today") !== null;
-    const isOther  = arg.el.closest(".fc-day-other") !== null;
+    const key     = toKey(arg.date);
+    const data    = getDayData(key);
+    const isToday = arg.el.closest(".fc-day-today") !== null;
+    const isOther = arg.el.closest(".fc-day-other") !== null;
 
     const frame = arg.el.querySelector(".fc-daygrid-day-frame") as HTMLElement | null;
     if (!frame) return;
 
-    // очищаем стандартный контент FC
     frame.innerHTML = "";
 
     const inner = document.createElement("div");
     inner.className = "fc-day-custom-inner";
     inner.style.cssText = "display:flex;flex-direction:column;justify-content:space-between;height:100%;";
 
-    // Верхняя строка: число + бейджи
     const top = document.createElement("div");
     top.style.cssText = "display:flex;align-items:flex-start;justify-content:space-between;";
 
@@ -208,7 +186,6 @@ export function MonthCalendar() {
 
       top.appendChild(badges);
 
-      // Бары внизу
       if (data.bars.length > 0) {
         const bars = document.createElement("div");
         bars.style.cssText = "display:flex;flex-direction:column;gap:2px;margin-top:6px;";
@@ -237,14 +214,14 @@ export function MonthCalendar() {
     if (!calRef.current) return;
 
     const cal = new Calendar(calRef.current, {
-      plugins:        [dayGridPlugin],
-      initialView:    "dayGridMonth",
-      initialDate:    "2026-11-01",
-      locale:         "ru",
-      firstDay:       1,
-      headerToolbar:  false,
-      fixedWeekCount: false,
-      height:         "auto",
+      plugins:         [dayGridPlugin],
+      initialView:     "dayGridMonth",
+      initialDate:     "2026-11-01",
+      locale:          "ru",
+      firstDay:        1,
+      headerToolbar:   false,
+      fixedWeekCount:  false,
+      height:          "auto",
       dayCellDidMount: renderDayCell,
     });
 
@@ -256,7 +233,6 @@ export function MonthCalendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Смена вида
   useEffect(() => {
     const cal = calInstance.current;
     if (!cal) return;
@@ -285,10 +261,8 @@ export function MonthCalendar() {
       overflow: "hidden",
       boxShadow: `0 2px 12px -4px ${alpha(brand.cocoa, 0.07)}`,
     }}>
-      {/* Инжект CSS */}
       <style>{FC_STYLES}</style>
 
-      {/* Шапка */}
       <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", mb: "24px", flexWrap: "wrap", gap: "12px" }}>
         <Box>
           <Typography className="eyebrow" sx={{ display: "block", mb: "4px" }}>Календарь</Typography>
@@ -298,7 +272,6 @@ export function MonthCalendar() {
           </Typography>
         </Box>
 
-        {/* Контролы */}
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
           <Box onClick={goToday} sx={{
             borderRadius: "100px", border: `1px solid ${alpha(brand.line, 0.8)}`,
@@ -334,7 +307,6 @@ export function MonthCalendar() {
         </Box>
       </Box>
 
-      {/* FullCalendar */}
       <Box className="fc-osanka" ref={calRef} />
     </Box>
   );

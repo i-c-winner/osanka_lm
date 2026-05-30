@@ -6,10 +6,11 @@ import Button     from "@mui/material/Button";
 import { alpha }  from "@mui/material/styles";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import AddIcon               from "@mui/icons-material/Add";
-import { brand }       from "@/shared/theme";
+import { brand }        from "@/shared/theme";
 import { StatsCards }   from "@/entities/stats/ui/StatsCards";
 import { MonthCalendar } from "@/entities/calendar/ui/MonthCalendar";
 import { TodayPanel }   from "@/entities/today/ui/TodayPanel";
+import type { GetDayData } from "@/entities/calendar/model/types";
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,11 @@ function Hero() {
 
 // ─── CalendarView ─────────────────────────────────────────────────────────────
 
-export function CalendarView() {
+interface CalendarViewProps {
+  getDayData: GetDayData;
+}
+
+export function CalendarView({ getDayData }: CalendarViewProps) {
   return (
     <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
       <Hero />
@@ -100,7 +105,7 @@ export function CalendarView() {
         gap: "20px",
         alignItems: "flex-start",
       }}>
-        <MonthCalendar />
+        <MonthCalendar getDayData={getDayData} />
         <TodayPanel />
       </Box>
     </Box>
