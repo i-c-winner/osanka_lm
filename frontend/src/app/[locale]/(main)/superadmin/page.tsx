@@ -414,19 +414,6 @@ function shortId(id: string | null | undefined) {
 
 // ─── Вкладка «Дни» ───────────────────────────────────────────────────────────
 
-function toISO(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-
-function buildGrid(year: number, month: number): (Date | null)[] {
-  const first = new Date(year, month, 1);
-  const startDow = (first.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: (Date | null)[] = Array(startDow).fill(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
-  while (cells.length % 7) cells.push(null);
-  return cells;
-}
 
 // 0=Пн…6=Вс (соответствует (getDay()+6)%7)
 const DOW_LABELS = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
@@ -533,11 +520,9 @@ function DaysTab() {
 
       {/* Навигация */}
       <Box sx={{ display: "flex", alignItems: "center", gap: "12px", mb: "16px" }}>
-        {[["‹", prevMonth], ["›", nextMonth]].map(([ch, fn], i) => i === 0 ? (
-          <Box key={String(ch)} onClick={() => (fn as () => void)()} sx={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${alpha(brand.line, 0.8)}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { backgroundColor: alpha(brand.line, 0.4) } }}>
-            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "16px", color: brand.cocoa, lineHeight: 1 }}>{ch}</Typography>
-          </Box>
-        ) : null)}
+        <Box onClick={prevMonth} sx={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${alpha(brand.line, 0.8)}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { backgroundColor: alpha(brand.line, 0.4) } }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "16px", color: brand.cocoa, lineHeight: 1 }}>‹</Typography>
+        </Box>
         <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "20px", fontWeight: 400, color: brand.cocoa, minWidth: 180, textAlign: "center" }}>
           {MONTH_RU[month]} {year}
         </Typography>
