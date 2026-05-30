@@ -9,6 +9,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/shared/i18n/navigation";
 import { brand } from "@/shared/theme";
+import { useMe } from "@/features/me/model/useMe";
 
 // ─── Логотип ──────────────────────────────────────────────────────────────────
 
@@ -141,6 +142,30 @@ function UserAvatar() {
   );
 }
 
+// ─── Кнопка роли ─────────────────────────────────────────────────────────────
+
+function RoleButton({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} style={{ textDecoration: "none" }}>
+      <Box sx={{
+        borderRadius: "100px",
+        border: `1px solid ${alpha(brand.line, 0.8)}`,
+        px: "12px", py: "5px", cursor: "pointer",
+        transition: "all 0.15s ease",
+        "&:hover": { backgroundColor: alpha(brand.line, 0.5), borderColor: brand.cocoa },
+      }}>
+        <Typography sx={{
+          fontFamily: "var(--font-body)", fontWeight: 600,
+          fontSize: "12px", letterSpacing: "0.04em",
+          color: brand.cocoa,
+        }}>
+          {label}
+        </Typography>
+      </Box>
+    </Link>
+  );
+}
+
 // ─── AppHeader ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [{ key: "home", href: "/main" }] as const;
@@ -148,6 +173,7 @@ const NAV_ITEMS = [{ key: "home", href: "/main" }] as const;
 export function AppHeader() {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  const { hasRole } = useMe();
 
   return (
     <Box
@@ -198,6 +224,16 @@ export function AppHeader() {
               active={pathname === href || (key === "home" && pathname === "/")}
             />
           ))}
+        </Box>
+
+        {/* Кнопки ролей */}
+        <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", gap: "8px" }}>
+          {hasRole("admin", "superadmin") && (
+            <RoleButton href="/admin" label="Admin" />
+          )}
+          {hasRole("superadmin") && (
+            <RoleButton href="/superadmin" label="Superadmin" />
+          )}
         </Box>
 
         {/* Иконки справа */}
