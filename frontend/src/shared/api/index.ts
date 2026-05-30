@@ -4,3 +4,4 @@ export { authApi } from "./endpoints/auth";
 export { usersApi } from "./endpoints/users";
 export { locationsApi } from "./endpoints/locations";
 export { sessionsApi } from "./endpoints/sessions";
+export { daysApi } from "./endpoints/days";

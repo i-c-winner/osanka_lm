@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Tabs from "@mui/material/Tabs";
@@ -24,8 +24,8 @@ import IconButton from "@mui/material/IconButton";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
 import { useMe } from "@/features/me/model/useMe";
-import { usersApi, locationsApi, sessionsApi } from "@/shared/api";
-import type { MeResponse, LocationResponse, SessionResponse } from "@/shared/api";
+import { usersApi, locationsApi, sessionsApi, daysApi } from "@/shared/api";
+import type { MeResponse, LocationResponse, SessionResponse, DayResponse } from "@/shared/api";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -405,20 +405,39 @@ function shortId(id: string | null | undefined) {
 }
 
 function SessionsTab() {
-  const [sessions, setSessions] = useState<SessionResponse[]>([]);
+  const [sessions,    setSessions]    = useState<SessionResponse[]>([]);
   const [locationMap, setLocationMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const [trainerMap,  setTrainerMap]  = useState<Record<string, string>>({});
+  const [dayMap,      setDayMap]      = useState<Record<string, string>>({});  // id → "DD.MM.YYYY"
+  const [loading,  setLoading]  = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, locs] = await Promise.all([
+      const [data, locs, days, users] = await Promise.all([
         sessionsApi.list(),
         locationsApi.list(true),
+        daysApi.list(),
+        usersApi.getAll(),
       ]);
       setSessions(data);
       setLocationMap(Object.fromEntries(locs.map((l) => [l.id, l.name])));
+      setDayMap(Object.fromEntries(
+        days.map((d) => [
+          d.id,
+          new Date(d.date + "T00:00:00").toLocaleDateString("ru-RU", { day: "2-digit", month: "short", year: "numeric" }),
+        ])
+      ));
+      setTrainerMap(Object.fromEntries(
+        users
+          .filter((u) => u.roles.includes("trainer"))
+          .map((u) => [
+            u.id,
+            [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || u.telegram_id,
+          ])
+      ));
     } finally {
       setLoading(false);
     }
@@ -436,6 +455,16 @@ function SessionsTab() {
     }
   }
 
+  async function handleStatusChange(id: string, status: string) {
+    setUpdating(id);
+    try {
+      const updated = await sessionsApi.update(id, { status });
+      setSessions((prev) => prev.map((s) => s.id === updated.id ? { ...s, status: updated.status } : s));
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: "40px" }}>
@@ -444,7 +473,7 @@ function SessionsTab() {
     );
   }
 
-  const COLS = ["Начало", "Конец", "Статус", "Вместимость", "Локация", "Тренер (id)", "Тип занятия (id)", "День (id)", ""];
+  const COLS = ["Начало", "Конец", "Статус", "Вместимость", "Локация", "Тренер", "Дата занятия", ""];
 
   return (
     <Box>
@@ -474,12 +503,13 @@ function SessionsTab() {
             )}
             {sessions.map((s) => {
               const isDeleting = deleting === s.id;
+              const isUpdating = updating === s.id;
               const color = STATUS_COLOR[s.status] ?? brand.mute;
               return (
                 <TableRow
                   key={s.id}
                   sx={{
-                    opacity: isDeleting ? 0.4 : 1, transition: "opacity 0.2s",
+                    opacity: isDeleting || isUpdating ? 0.4 : 1, transition: "opacity 0.2s",
                     "&:last-child td": { borderBottom: "none" },
                     "&:hover td": { backgroundColor: alpha(brand.cream, 0.4) },
                   }}
@@ -491,12 +521,26 @@ function SessionsTab() {
                   <TableCell sx={{ ...CELL_SX, whiteSpace: "nowrap", color: brand.mute }}>{fmt(s.ends_at)}</TableCell>
 
                   {/* Статус */}
-                  <TableCell sx={CELL_SX}>
-                    <Box sx={{ display: "inline-block", px: "8px", py: "2px", borderRadius: "6px", backgroundColor: alpha(color, 0.12) }}>
-                      <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 600, color }}>
-                        {s.status}
-                      </Typography>
-                    </Box>
+                  <TableCell sx={{ ...CELL_SX, minWidth: 130 }}>
+                    <Select
+                      value={s.status}
+                      disabled={isUpdating || isDeleting}
+                      onChange={(e) => handleStatusChange(s.id, e.target.value)}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 600, color,
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: alpha(color, 0.4) },
+                        "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: color },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: color },
+                        "& .MuiSelect-select": { py: "4px", px: "10px" },
+                        backgroundColor: alpha(color, 0.07), borderRadius: "6px",
+                      }}
+                    >
+                      {Object.keys(STATUS_COLOR).map((st) => (
+                        <MenuItem key={st} value={st} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>{st}</MenuItem>
+                      ))}
+                    </Select>
                   </TableCell>
 
                   {/* Вместимость */}
@@ -505,24 +549,25 @@ function SessionsTab() {
                   {/* Локация */}
                   <TableCell sx={CELL_SX}>
                     {s.location_id
-                      ? (locationMap[s.location_id] ?? shortId(s.location_id))
+                      ? (locationMap[s.location_id] ?? "—")
                       : <Box component="span" sx={{ color: brand.mute }}>—</Box>
                     }
                   </TableCell>
 
-                  {/* Тренер id */}
-                  <TableCell sx={{ ...CELL_SX, color: brand.mute, fontFamily: "monospace", fontSize: "11px" }}>
-                    {shortId(s.trainer_id)}
+                  {/* Тренер */}
+                  <TableCell sx={CELL_SX}>
+                    {s.trainer_id
+                      ? (trainerMap[s.trainer_id] ?? shortId(s.trainer_id))
+                      : <Box component="span" sx={{ color: brand.mute }}>—</Box>
+                    }
                   </TableCell>
 
-                  {/* Тип занятия id */}
-                  <TableCell sx={{ ...CELL_SX, color: brand.mute, fontFamily: "monospace", fontSize: "11px" }}>
-                    {shortId(s.class_type_id)}
-                  </TableCell>
-
-                  {/* День id */}
-                  <TableCell sx={{ ...CELL_SX, color: brand.mute, fontFamily: "monospace", fontSize: "11px" }}>
-                    {shortId(s.day_id)}
+                  {/* Дата занятия */}
+                  <TableCell sx={{ ...CELL_SX, whiteSpace: "nowrap" }}>
+                    {s.day_id
+                      ? (dayMap[s.day_id] ?? shortId(s.day_id))
+                      : <Box component="span" sx={{ color: brand.mute }}>—</Box>
+                    }
                   </TableCell>
 
                   {/* Удалить */}
@@ -546,6 +591,275 @@ function SessionsTab() {
   );
 }
 
+// ─── Вкладка «Дни» ───────────────────────────────────────────────────────────
+
+const MONTH_RU = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const DOW_RU   = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+
+function toISO(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function buildGrid(year: number, month: number): (Date | null)[] {
+  const first = new Date(year, month, 1);
+  const startDow = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = Array(startDow).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7) cells.push(null);
+  return cells;
+}
+
+// 0=Пн…6=Вс (соответствует (getDay()+6)%7)
+const DOW_LABELS = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+
+function DaysTab() {
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [days,  setDays]  = useState<DayResponse[]>([]);
+  const [saving,    setSaving]    = useState<string | null>(null);
+  const [filling,   setFilling]   = useState(false);
+  const [loading,   setLoading]   = useState(true);
+  const [selectedDow, setSelectedDow] = useState<Set<number>>(new Set());  // 0=Пн…6=Вс
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setDays(await daysApi.list()); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const activeMap = useMemo(
+    () => Object.fromEntries(days.map((d) => [d.date, d.id])),
+    [days],
+  );
+
+  async function toggleDay(date: Date) {
+    const iso = toISO(date);
+    const existingId = activeMap[iso];
+    setSaving(iso);
+    try {
+      if (existingId) {
+        await daysApi.delete(existingId);
+        setDays((prev) => prev.filter((d) => d.id !== existingId));
+      } else {
+        const created = await daysApi.create({ date: iso, status: "active" });
+        setDays((prev) => [...prev, created]);
+      }
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  function toggleDow(dow: number) {
+    setSelectedDow((prev) => {
+      const next = new Set(prev);
+      if (next.has(dow)) next.delete(dow); else next.add(dow);
+      return next;
+    });
+  }
+
+  async function fillSixMonths() {
+    if (selectedDow.size === 0) return;
+    setFilling(true);
+    try {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 6);
+
+      const toCreate: string[] = [];
+      const cur = new Date(start);
+      while (cur <= end) {
+        const dow = (cur.getDay() + 6) % 7; // 0=Пн…6=Вс
+        const iso = toISO(cur);
+        if (selectedDow.has(dow) && !(iso in activeMap)) {
+          toCreate.push(iso);
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      // Создаём по одному (можно параллельно, но лимитируем нагрузку)
+      const created: DayResponse[] = [];
+      for (const iso of toCreate) {
+        const d = await daysApi.create({ date: iso, status: "active" });
+        created.push(d);
+      }
+      setDays((prev) => [...prev, ...created]);
+    } finally {
+      setFilling(false);
+    }
+  }
+
+  function prevMonth() {
+    if (month === 0) { setYear(y => y - 1); setMonth(11); }
+    else setMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (month === 11) { setYear(y => y + 1); setMonth(0); }
+    else setMonth(m => m + 1);
+  }
+
+  const grid = buildGrid(year, month);
+
+  return (
+    <Box>
+      <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: brand.cocoa, mb: "20px" }}>
+        Дни занятий{" "}
+        <Box component="span" sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute, fontWeight: 400 }}>
+          ({days.length} в базе)
+        </Box>
+      </Typography>
+
+      {/* Навигация */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: "12px", mb: "16px" }}>
+        {[["‹", prevMonth], ["›", nextMonth]].map(([ch, fn], i) => i === 0 ? (
+          <Box key={String(ch)} onClick={() => (fn as () => void)()} sx={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${alpha(brand.line, 0.8)}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { backgroundColor: alpha(brand.line, 0.4) } }}>
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "16px", color: brand.cocoa, lineHeight: 1 }}>{ch}</Typography>
+          </Box>
+        ) : null)}
+        <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "20px", fontWeight: 400, color: brand.cocoa, minWidth: 180, textAlign: "center" }}>
+          {MONTH_RU[month]} {year}
+        </Typography>
+        <Box onClick={nextMonth} sx={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${alpha(brand.line, 0.8)}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { backgroundColor: alpha(brand.line, 0.4) } }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "16px", color: brand.cocoa, lineHeight: 1 }}>›</Typography>
+        </Box>
+      </Box>
+
+      {/* Календарная сетка */}
+      <Box sx={{ border: `1px solid ${alpha(brand.line, 0.6)}`, borderRadius: "14px", overflow: "hidden" }}>
+        {/* Заголовки */}
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", backgroundColor: alpha(brand.cream, 0.5) }}>
+          {DOW_RU.map((d) => (
+            <Box key={d} sx={{ py: "8px", textAlign: "center" }}>
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", color: brand.mute, textTransform: "uppercase" }}>
+                {d}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: "40px" }}>
+            <CircularProgress size={28} sx={{ color: brand.terracotta }} />
+          </Box>
+        ) : (
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px", backgroundColor: alpha(brand.line, 0.3) }}>
+            {grid.map((date, i) => {
+              if (!date) return <Box key={i} sx={{ backgroundColor: brand.ivory, minHeight: 52 }} />;
+              const iso      = toISO(date);
+              const isActive = iso in activeMap;
+              const isSaving = saving === iso;
+              const isToday  = iso === toISO(now);
+              return (
+                <Box
+                  key={iso}
+                  onClick={() => !isSaving && toggleDay(date)}
+                  sx={{
+                    minHeight: 52,
+                    backgroundColor: isActive ? brand.cocoa : brand.ivory,
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    opacity: isSaving ? 0.5 : 1,
+                    outline: isToday ? `2px solid ${brand.terracotta}` : "none",
+                    outlineOffset: -2,
+                    transition: "background-color 0.15s ease",
+                    "&:hover": {
+                      backgroundColor: isActive ? brand.cocoaSoft : alpha(brand.line, 0.4),
+                    },
+                  }}
+                >
+                  <Typography sx={{
+                    fontFamily: "var(--font-body)", fontSize: "14px",
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? brand.ivory : brand.cocoa,
+                    lineHeight: 1,
+                  }}>
+                    {date.getDate()}
+                  </Typography>
+                  {isActive && (
+                    <Box sx={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: brand.terracotta, mt: "4px" }} />
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+      </Box>
+
+      <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute, mt: "12px", mb: "24px" }}>
+        Нажмите на день чтобы добавить или убрать. Тёмный фон — день есть в базе.
+      </Typography>
+
+      {/* Заполнение по дням недели */}
+      <Box sx={{
+        p: "20px", borderRadius: "14px",
+        border: `1px solid ${alpha(brand.line, 0.7)}`,
+        backgroundColor: alpha(brand.cream, 0.4),
+      }}>
+        <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", color: brand.cocoa, mb: "12px" }}>
+          Заполнить на 6 месяцев вперёд
+        </Typography>
+
+        {/* Выбор дней недели */}
+        <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap", mb: "16px" }}>
+          {DOW_LABELS.map((label, i) => {
+            const active = selectedDow.has(i);
+            return (
+              <Box
+                key={i}
+                onClick={() => toggleDow(i)}
+                sx={{
+                  width: 40, height: 40, borderRadius: "10px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  backgroundColor: active ? brand.cocoa : "transparent",
+                  border: `1px solid ${active ? brand.cocoa : alpha(brand.line, 0.8)}`,
+                  transition: "all 0.15s ease",
+                  "&:hover": { borderColor: brand.cocoa, backgroundColor: active ? brand.cocoaSoft : alpha(brand.line, 0.4) },
+                }}
+              >
+                <Typography sx={{
+                  fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 600,
+                  color: active ? brand.ivory : brand.cocoa,
+                  letterSpacing: "0.04em",
+                }}>
+                  {label}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Box>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <Button
+            variant="contained"
+            disabled={selectedDow.size === 0 || filling}
+            onClick={fillSixMonths}
+            startIcon={filling ? <CircularProgress size={14} color="inherit" /> : <AddIcon />}
+            sx={{
+              backgroundColor: brand.cocoa, color: brand.ivory,
+              borderRadius: "10px", fontFamily: "var(--font-body)",
+              fontWeight: 600, fontSize: "13px", textTransform: "none",
+              boxShadow: "none", "&:hover": { backgroundColor: brand.cocoaSoft, boxShadow: "none" },
+            }}
+          >
+            {filling ? "Создаём..." : "Заполнить"}
+          </Button>
+          {selectedDow.size > 0 && !filling && (
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute }}>
+              Выбрано: {Array.from(selectedDow).sort().map((i) => DOW_LABELS[i]).join(", ")}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 function DashboardsTab() {
   return (
     <Box>
@@ -562,9 +876,10 @@ function DashboardsTab() {
 // ─── Страница ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { label: "Users",    component: <UsersTab />    },
-  { label: "Locale",   component: <LocaleTab />   },
-  { label: "Сессии",   component: <SessionsTab /> },
+  { label: "Users",      component: <UsersTab />      },
+  { label: "Locale",     component: <LocaleTab />     },
+  { label: "Сессии",     component: <SessionsTab />   },
+  { label: "Дни",        component: <DaysTab />       },
   { label: "Dashboards", component: <DashboardsTab /> },
 ];
 
@@ -572,16 +887,19 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const { me, loading, hasRole } = useMe();
   const [tab, setTab] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (!mounted || loading) return;
     if (!hasRole("superadmin")) router.replace("/");
-  }, [loading, me]);
+  }, [mounted, loading, me]);
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-        <Typography sx={{ fontFamily: "var(--font-body)", color: brand.mute }}>Загрузка...</Typography>
+        <CircularProgress size={28} sx={{ color: brand.terracotta }} />
       </Box>
     );
   }

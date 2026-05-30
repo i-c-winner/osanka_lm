@@ -156,3 +156,22 @@ export interface AttendanceResponse {
   marked_by: string;
   marked_at: string;
 }
+
+// ─── Day ─────────────────────────────────────────────────────────────────────
+
+export interface DayResponse {
+  id: string;
+  date: string;
+  location_id?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface DayCreate {
+  date: string;
+  status: string;
+  location_id?: string;
+  notes?: string;
+}
