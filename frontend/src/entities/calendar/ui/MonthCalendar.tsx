@@ -102,10 +102,18 @@ interface MonthCalendarProps {
 // ─── MonthCalendar ────────────────────────────────────────────────────────────
 
 export function MonthCalendar({ getDayData }: MonthCalendarProps) {
-  const calRef      = useRef<HTMLDivElement>(null);
-  const calInstance = useRef<Calendar | null>(null);
+  const calRef        = useRef<HTMLDivElement>(null);
+  const calInstance   = useRef<Calendar | null>(null);
+  const getDayDataRef = useRef<GetDayData>(getDayData);
   const [view, setView]   = useState<"week" | "month">("month");
-  const [title, setTitle] = useState<{ month: string; year: string }>({ month: "Ноябрь", year: "2026" });
+  const today = new Date();
+  const [title, setTitle] = useState<{ month: string; year: string }>({
+    month: MONTH_NAMES_RU[today.getMonth()],
+    year:  String(today.getFullYear()),
+  });
+
+  // Всегда держим ref актуальным
+  getDayDataRef.current = getDayData;
 
   function updateTitle(cal: Calendar) {
     const d = cal.getDate();
@@ -114,7 +122,7 @@ export function MonthCalendar({ getDayData }: MonthCalendarProps) {
 
   function renderDayCell(arg: DayCellMountArg) {
     const key     = toKey(arg.date);
-    const data    = getDayData(key);
+    const data    = getDayDataRef.current(key);
     const isToday = arg.el.closest(".fc-day-today") !== null;
     const isOther = arg.el.closest(".fc-day-other") !== null;
 
@@ -216,7 +224,7 @@ export function MonthCalendar({ getDayData }: MonthCalendarProps) {
     const cal = new Calendar(calRef.current, {
       plugins:         [dayGridPlugin],
       initialView:     "dayGridMonth",
-      initialDate:     "2026-11-01",
+      initialDate:     new Date(),
       locale:          "ru",
       firstDay:        1,
       headerToolbar:   false,
@@ -239,6 +247,13 @@ export function MonthCalendar({ getDayData }: MonthCalendarProps) {
     cal.changeView(view === "month" ? "dayGridMonth" : "dayGridWeek");
     updateTitle(cal);
   }, [view]);
+
+  // Перерисовываем ячейки когда данные обновились
+  useEffect(() => {
+    const cal = calInstance.current;
+    if (!cal) return;
+    cal.render();
+  }, [getDayData]);
 
   function goToday() {
     calInstance.current?.today();
