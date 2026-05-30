@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { authApi } from "@/shared/api";
+import { authApi, usersApi } from "@/shared/api";
 import { tokenStorage } from "@/shared/lib/token";
+import { userStorage } from "@/shared/lib/userStorage";
 import type { TelegramLoginRequest } from "@/shared/api";
 
 export function useAuth() {
@@ -15,10 +16,14 @@ export function useAuth() {
     try {
       const response = await authApi.login(data);
       tokenStorage.set(response.access_token);
+
+      // Сразу загружаем и кешируем профиль
+      const profile = await usersApi.getMe();
+      userStorage.set(profile);
+
       return response;
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Ошибка входа";
+      const message = err instanceof Error ? err.message : "Ошибка входа";
       setError(message);
       throw err;
     } finally {
@@ -28,6 +33,7 @@ export function useAuth() {
 
   const logout = () => {
     tokenStorage.remove();
+    userStorage.remove();
   };
 
   const isAuthenticated = () => tokenStorage.get() !== null;

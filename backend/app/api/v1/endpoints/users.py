@@ -106,6 +106,9 @@ async def change_user_role(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if body.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Cannot assign superadmin role")
+
     role_result = await db.execute(select(Role).where(Role.role == body.role))
     role = role_result.scalar_one_or_none()
     if not role:

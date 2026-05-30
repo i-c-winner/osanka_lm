@@ -16,7 +16,11 @@ import SettingsOutlinedIcon     from "@mui/icons-material/SettingsOutlined";
 import FavoriteIcon             from "@mui/icons-material/Favorite";
 import MenuIcon                 from "@mui/icons-material/Menu";
 import CloseIcon                from "@mui/icons-material/Close";
+import LogoutIcon               from "@mui/icons-material/Logout";
+import { useRouter }            from "next/navigation";
 import { brand }                from "@/shared/theme";
+import { tokenStorage }         from "@/shared/lib/token";
+import { userStorage }          from "@/shared/lib/userStorage";
 import { CalendarView }         from "@/entities/calendar";
 
 // ─── Типы ─────────────────────────────────────────────────────────────────────
@@ -76,6 +80,35 @@ function LiveCard() {
 
 // ─── Содержимое боковой панели ────────────────────────────────────────────────
 
+function LogoutButton() {
+  const router = useRouter();
+
+  function handleLogout() {
+    tokenStorage.remove();
+    userStorage.remove();
+    router.replace("/main");
+  }
+
+  return (
+    <Box
+      onClick={handleLogout}
+      sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "16px", py: "13px", borderRadius: "14px", cursor: "pointer",
+        transition: "background-color 0.18s ease",
+        "&:hover": { backgroundColor: alpha(brand.terracotta, 0.08) },
+      }}
+    >
+      <Box sx={{ color: brand.terracotta, display: "flex", alignItems: "center", flexShrink: 0 }}>
+        <LogoutIcon sx={{ fontSize: 18 }} />
+      </Box>
+      <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 400, fontSize: "14px", color: brand.terracotta }}>
+        Выйти
+      </Typography>
+    </Box>
+  );
+}
+
 function AsideContent({
   active,
   onChange,
@@ -127,6 +160,7 @@ function AsideContent({
             </Box>
           );
         })}
+        <LogoutButton />
       </Box>
 
       <Box sx={{ mt: "auto" }}>

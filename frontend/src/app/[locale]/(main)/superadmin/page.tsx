@@ -24,7 +24,7 @@ import type { MeResponse } from "@/shared/api";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
-const ROLES = ["client", "admin", "superadmin"];
+const ROLES = ["guest", "client", "user", "trainer", "admin"];
 
 const CELL_SX = {
   fontFamily: "var(--font-body)",
@@ -144,28 +144,34 @@ function UsersTab() {
 
                   {/* Роль */}
                   <TableCell sx={{ ...CELL_SX, minWidth: 140 }}>
-                    <Select
-                      value={currentRole}
-                      disabled={isUpdating}
-                      onChange={(e) => handleRoleChange(user, e.target.value)}
-                      size="small"
-                      variant="outlined"
-                      sx={{
-                        fontFamily: "var(--font-body)",
-                        fontSize: "12px",
-                        color: brand.cocoa,
-                        "& .MuiOutlinedInput-notchedOutline": { borderColor: alpha(brand.line, 0.8) },
-                        "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: brand.cocoa },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: brand.terracotta },
-                        "& .MuiSelect-select": { py: "5px", px: "10px" },
-                      }}
-                    >
-                      {ROLES.map((r) => (
-                        <MenuItem key={r} value={r} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
-                          {r}
-                        </MenuItem>
-                      ))}
-                    </Select>
+                    {currentRole === "superadmin" ? (
+                      <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.terracottaDeep, fontWeight: 600 }}>
+                        superadmin
+                      </Typography>
+                    ) : (
+                      <Select
+                        value={currentRole}
+                        disabled={isUpdating}
+                        onChange={(e) => handleRoleChange(user, e.target.value)}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          fontFamily: "var(--font-body)",
+                          fontSize: "12px",
+                          color: brand.cocoa,
+                          "& .MuiOutlinedInput-notchedOutline": { borderColor: alpha(brand.line, 0.8) },
+                          "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: brand.cocoa },
+                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: brand.terracotta },
+                          "& .MuiSelect-select": { py: "5px", px: "10px" },
+                        }}
+                      >
+                        {ROLES.map((r) => (
+                          <MenuItem key={r} value={r} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
+                            {r}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
                   </TableCell>
 
                   {/* is_active */}

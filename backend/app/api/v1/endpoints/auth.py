@@ -8,10 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.db.session import get_db
+from app.models.role import Role
 from app.models.user import User
+from app.models.user_role import UserRole
 from app.schemas.user import UserCreateResponse
 
 router = APIRouter()
+
+CLIENT_ROLE = "client"
 
 
 class TelegramLoginRequest(BaseModel):
@@ -36,7 +40,23 @@ async def login(payload: TelegramLoginRequest, db: AsyncSession = Depends(get_db
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(status_code=404, detail=f"User with telegram_id={payload.telegram_id} not found")
+        # Создаём нового пользователя с ролью guest
+        user = User(
+            telegram_id=payload.telegram_id,
+            telegram_username=payload.telegram_username,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+        )
+        db.add(user)
+        await db.flush()
+
+        role_result = await db.execute(select(Role).where(Role.role == CLIENT_ROLE))
+        role = role_result.scalar_one_or_none()
+        if role:
+            db.add(UserRole(user_id=user.id, role_id=role.id))
+
+        await db.flush()
+        await db.refresh(user)
 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="User is inactive")
