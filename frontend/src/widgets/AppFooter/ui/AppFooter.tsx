@@ -7,7 +7,6 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslations } from "next-intl";
-import { Link } from "@/shared/i18n/navigation";
 import { brand } from "@/shared/theme";
 
 // Цветовые токены для тёмного фона футера
@@ -55,11 +54,11 @@ function FooterColumn({ heading, links }: FooterColumnProps) {
         {heading}
       </Typography>
       {links.map(({ label, href }) => (
-        <Link key={href} href={href} style={{ textDecoration: "none" }}>
+        <a key={href} href={href} style={{ textDecoration: "none" }}>
           <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 400, fontSize: "14px", lineHeight: 1.4, color: on.secondary, transition: "color 0.18s ease", "&:hover": { color: on.primary } }}>
             {label}
           </Typography>
-        </Link>
+        </a>
       ))}
     </Box>
   );
