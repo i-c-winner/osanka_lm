@@ -11,6 +11,7 @@ from app.models.role import Role
 from app.models.user import User
 from app.models.user_role import UserRole
 from app.schemas.user import MeResponse, UserCreate, UserResponse
+from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -23,6 +24,22 @@ class ChangeRoleRequest(BaseModel):
 
 class ChangeActiveRequest(BaseModel):
     is_active: bool
+
+
+@router.get("/", response_model=list[MeResponse])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("admin", "superadmin")),
+):
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+
+    out = []
+    for user in users:
+        roles = await get_user_roles(user, db)
+        out.append(MeResponse.model_validate({**user.__dict__, "roles": roles}))
+
+    return out
 
 
 @router.get("/me", response_model=MeResponse)
