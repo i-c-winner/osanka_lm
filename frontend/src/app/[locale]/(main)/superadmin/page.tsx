@@ -24,8 +24,8 @@ import IconButton from "@mui/material/IconButton";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
 import { useMe } from "@/features/me/model/useMe";
-import { usersApi, locationsApi } from "@/shared/api";
-import type { MeResponse, LocationResponse } from "@/shared/api";
+import { usersApi, locationsApi, sessionsApi } from "@/shared/api";
+import type { MeResponse, LocationResponse, SessionResponse } from "@/shared/api";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -387,6 +387,165 @@ function LocaleTab() {
   );
 }
 
+const STATUS_COLOR: Record<string, string> = {
+  active:    brand.sage,
+  completed: brand.mute,
+  cancelled: brand.terracotta,
+};
+
+function fmt(iso: string) {
+  return new Date(iso).toLocaleString("ru-RU", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function shortId(id: string | null | undefined) {
+  return id ? id.slice(0, 8) + "…" : "—";
+}
+
+function SessionsTab() {
+  const [sessions, setSessions] = useState<SessionResponse[]>([]);
+  const [locationMap, setLocationMap] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [data, locs] = await Promise.all([
+        sessionsApi.list(),
+        locationsApi.list(true),
+      ]);
+      setSessions(data);
+      setLocationMap(Object.fromEntries(locs.map((l) => [l.id, l.name])));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleDelete(id: string) {
+    setDeleting(id);
+    try {
+      await sessionsApi.delete(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: "40px" }}>
+        <CircularProgress size={28} sx={{ color: brand.terracotta }} />
+      </Box>
+    );
+  }
+
+  const COLS = ["Начало", "Конец", "Статус", "Вместимость", "Локация", "Тренер (id)", "Тип занятия (id)", "День (id)", ""];
+
+  return (
+    <Box>
+      <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: brand.cocoa, mb: "20px" }}>
+        Сессии{" "}
+        <Box component="span" sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute, fontWeight: 400 }}>
+          ({sessions.length})
+        </Box>
+      </Typography>
+
+      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflow: "hidden" }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              {COLS.map((h) => (
+                <TableCell key={h} sx={HEAD_CELL_SX}>{h}</TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sessions.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={COLS.length} sx={{ ...CELL_SX, textAlign: "center", color: brand.mute, py: "24px" }}>
+                  Нет сессий
+                </TableCell>
+              </TableRow>
+            )}
+            {sessions.map((s) => {
+              const isDeleting = deleting === s.id;
+              const color = STATUS_COLOR[s.status] ?? brand.mute;
+              return (
+                <TableRow
+                  key={s.id}
+                  sx={{
+                    opacity: isDeleting ? 0.4 : 1, transition: "opacity 0.2s",
+                    "&:last-child td": { borderBottom: "none" },
+                    "&:hover td": { backgroundColor: alpha(brand.cream, 0.4) },
+                  }}
+                >
+                  {/* Начало */}
+                  <TableCell sx={{ ...CELL_SX, whiteSpace: "nowrap" }}>{fmt(s.starts_at)}</TableCell>
+
+                  {/* Конец */}
+                  <TableCell sx={{ ...CELL_SX, whiteSpace: "nowrap", color: brand.mute }}>{fmt(s.ends_at)}</TableCell>
+
+                  {/* Статус */}
+                  <TableCell sx={CELL_SX}>
+                    <Box sx={{ display: "inline-block", px: "8px", py: "2px", borderRadius: "6px", backgroundColor: alpha(color, 0.12) }}>
+                      <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 600, color }}>
+                        {s.status}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+
+                  {/* Вместимость */}
+                  <TableCell sx={{ ...CELL_SX, textAlign: "center" }}>{s.capacity}</TableCell>
+
+                  {/* Локация */}
+                  <TableCell sx={CELL_SX}>
+                    {s.location_id
+                      ? (locationMap[s.location_id] ?? shortId(s.location_id))
+                      : <Box component="span" sx={{ color: brand.mute }}>—</Box>
+                    }
+                  </TableCell>
+
+                  {/* Тренер id */}
+                  <TableCell sx={{ ...CELL_SX, color: brand.mute, fontFamily: "monospace", fontSize: "11px" }}>
+                    {shortId(s.trainer_id)}
+                  </TableCell>
+
+                  {/* Тип занятия id */}
+                  <TableCell sx={{ ...CELL_SX, color: brand.mute, fontFamily: "monospace", fontSize: "11px" }}>
+                    {shortId(s.class_type_id)}
+                  </TableCell>
+
+                  {/* День id */}
+                  <TableCell sx={{ ...CELL_SX, color: brand.mute, fontFamily: "monospace", fontSize: "11px" }}>
+                    {shortId(s.day_id)}
+                  </TableCell>
+
+                  {/* Удалить */}
+                  <TableCell sx={{ ...CELL_SX, width: 48, pr: "8px" }}>
+                    <IconButton
+                      size="small"
+                      disabled={isDeleting}
+                      onClick={() => handleDelete(s.id)}
+                      sx={{ color: brand.mute, "&:hover": { color: brand.terracotta, backgroundColor: alpha(brand.terracotta, 0.08) } }}
+                    >
+                      <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+}
+
 function DashboardsTab() {
   return (
     <Box>
@@ -403,8 +562,9 @@ function DashboardsTab() {
 // ─── Страница ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { label: "Users",      component: <UsersTab />      },
-  { label: "Locale",     component: <LocaleTab />     },
+  { label: "Users",    component: <UsersTab />    },
+  { label: "Locale",   component: <LocaleTab />   },
+  { label: "Сессии",   component: <SessionsTab /> },
   { label: "Dashboards", component: <DashboardsTab /> },
 ];
 

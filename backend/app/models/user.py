@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import Boolean, Column, Date, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -25,3 +26,5 @@ class User(Base):
     language_code = Column(String(10), nullable=True)
     timezone = Column(String(64), nullable=True)
     birth_date = Column(Date, nullable=True)
+
+    session_participations = relationship("SessionParticipant", back_populates="user")

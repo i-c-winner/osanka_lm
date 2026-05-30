@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
@@ -210,9 +210,12 @@ export function AppHeader() {
   const pathname = usePathname();
   const { hasRole } = useMe();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const hasAdmin = hasRole("admin", "superadmin");
-  const hasSuperadmin = hasRole("superadmin");
+  useEffect(() => { setMounted(true); }, []);
+
+  const hasAdmin = mounted && hasRole("admin", "superadmin");
+  const hasSuperadmin = mounted && hasRole("superadmin");
 
   return (
     <Box
