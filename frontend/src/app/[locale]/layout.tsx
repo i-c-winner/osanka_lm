@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { MuiProvider } from "@/app/providers/MuiProvider";
 import { EmotionRegistry } from "@/app/providers/EmotionRegistry";
+import { CurrencyProvider } from "@/app/providers/CurrencyProvider";
 import { LOCALES, type Locale } from "@/shared/config";
 import "@/app/globals.css";
 
@@ -52,7 +53,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         <NextIntlClientProvider messages={messages}>
           <EmotionRegistry>
             <MuiProvider>
-              {children}
+              <CurrencyProvider>
+                {children}
+              </CurrencyProvider>
             </MuiProvider>
           </EmotionRegistry>
         </NextIntlClientProvider>

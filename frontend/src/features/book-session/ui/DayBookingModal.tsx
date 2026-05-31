@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal            from "@mui/material/Modal";
 import Fade             from "@mui/material/Fade";
 import Box              from "@mui/material/Box";
@@ -11,11 +11,11 @@ import CircularProgress from "@mui/material/CircularProgress";
 import CloseIcon              from "@mui/icons-material/Close";
 import AccessTimeIcon         from "@mui/icons-material/AccessTime";
 import PeopleOutlineIcon      from "@mui/icons-material/PeopleOutline";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CheckCircleIcon        from "@mui/icons-material/CheckCircle";
 import { alpha } from "@mui/material/styles";
 import { brand } from "@/shared/theme";
 import { bookingsApi } from "@/shared/api";
-import type { SessionResponse } from "@/shared/api";
+import type { SessionResponse, BookingResponse } from "@/shared/api";
 
 // ─── Утилиты ─────────────────────────────────────────────────────────────────
 
@@ -33,77 +33,91 @@ function fmtDate(dateKey: string) {
 // ─── SessionRow ───────────────────────────────────────────────────────────────
 
 interface SessionRowProps {
-  session:  SessionResponse;
-  onBook:   (sessionId: string) => void;
-  booking:  boolean;
-  booked:   boolean;
+  session:    SessionResponse;
+  bookingId:  string | null; // id брони если записан
+  onBook:     (sessionId: string) => void;
+  onCancel:   (bookingId: string, sessionId: string) => void;
+  processing: boolean;
 }
 
-function SessionRow({ session, onBook, booking, booked }: SessionRowProps) {
+function SessionRow({ session, bookingId, onBook, onCancel, processing }: SessionRowProps) {
+  const isBooked  = bookingId != null;
   const available = session.capacity - session.booked_count;
-  const isFull    = available <= 0;
+  const isFull    = available <= 0 && !isBooked;
 
   return (
     <Box sx={{
       borderRadius: "14px",
-      border: `1px solid ${booked ? alpha(brand.sage, 0.5) : alpha(brand.line, 0.7)}`,
+      border: `1px solid ${isBooked ? alpha(brand.sage, 0.5) : alpha(brand.line, 0.7)}`,
       p: "16px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "12px",
-      backgroundColor: booked ? alpha(brand.sage, 0.04) : brand.ivory,
-      opacity: booking ? 0.6 : 1,
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px",
+      backgroundColor: isBooked ? alpha(brand.sage, 0.04) : brand.ivory,
+      opacity: processing ? 0.6 : 1,
       transition: "opacity 0.2s",
     }}>
       {/* Время + места */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <AccessTimeIcon sx={{ fontSize: 15, color: brand.cocoaSoft }} />
           <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "15px", color: brand.cocoa }}>
             {fmtTime(session.starts_at)} — {fmtTime(session.ends_at)}
           </Typography>
         </Box>
-
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <PeopleOutlineIcon sx={{ fontSize: 14, color: brand.cocoaSoft }} />
           <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: isFull ? brand.terracotta : brand.cocoaSoft }}>
-            {isFull
-              ? "Мест нет"
-              : `Свободно ${available} из ${session.capacity}`}
+            {isFull ? "Мест нет" : `Свободно ${available} из ${session.capacity}`}
           </Typography>
         </Box>
       </Box>
 
-      {/* Кнопка */}
-      {booked ? (
-        <Box sx={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-          <CheckCircleOutlineIcon sx={{ fontSize: 18, color: brand.sage }} />
-          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", fontWeight: 600, color: brand.sage }}>
-            Записан
-          </Typography>
-        </Box>
-      ) : (
-        <Button
-          variant="contained"
-          size="small"
-          disabled={isFull || booking}
-          onClick={() => onBook(session.id)}
-          startIcon={booking ? <CircularProgress size={12} color="inherit" /> : undefined}
-          sx={{
-            backgroundColor: isFull ? alpha(brand.mute, 0.15) : brand.cocoa,
-            color: isFull ? brand.mute : brand.ivory,
-            borderRadius: "100px",
-            fontFamily: "var(--font-body)", fontWeight: 600,
-            fontSize: "12px", textTransform: "none",
-            px: "16px", boxShadow: "none", flexShrink: 0,
-            "&:hover": { backgroundColor: isFull ? alpha(brand.mute, 0.15) : brand.cocoaSoft, boxShadow: "none" },
-            "&.Mui-disabled": { backgroundColor: alpha(brand.mute, 0.12), color: brand.mute },
-          }}
-        >
-          {isFull ? "Мест нет" : "Забронировать"}
-        </Button>
-      )}
+      {/* Галочка + кнопка */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+        {isBooked && (
+          <CheckCircleIcon sx={{ fontSize: 20, color: brand.sage }} />
+        )}
+
+        {isBooked ? (
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={processing}
+            onClick={() => onCancel(bookingId!, session.id)}
+            startIcon={processing ? <CircularProgress size={12} color="inherit" /> : undefined}
+            sx={{
+              borderColor: alpha(brand.terracotta, 0.5),
+              color: brand.terracotta,
+              borderRadius: "100px",
+              fontFamily: "var(--font-body)", fontWeight: 600,
+              fontSize: "12px", textTransform: "none",
+              px: "14px", boxShadow: "none",
+              "&:hover": { borderColor: brand.terracotta, backgroundColor: alpha(brand.terracotta, 0.06), boxShadow: "none" },
+            }}
+          >
+            {processing ? "..." : "Отменить"}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            size="small"
+            disabled={isFull || processing}
+            onClick={() => onBook(session.id)}
+            startIcon={processing ? <CircularProgress size={12} color="inherit" /> : undefined}
+            sx={{
+              backgroundColor: isFull ? alpha(brand.mute, 0.15) : brand.cocoa,
+              color: isFull ? brand.mute : brand.ivory,
+              borderRadius: "100px",
+              fontFamily: "var(--font-body)", fontWeight: 600,
+              fontSize: "12px", textTransform: "none",
+              px: "16px", boxShadow: "none",
+              "&:hover": { backgroundColor: isFull ? alpha(brand.mute, 0.15) : brand.cocoaSoft, boxShadow: "none" },
+              "&.Mui-disabled": { backgroundColor: alpha(brand.mute, 0.12), color: brand.mute },
+            }}
+          >
+            {isFull ? "Мест нет" : "Забронировать"}
+          </Button>
+        )}
+      </Box>
     </Box>
   );
 }
@@ -111,49 +125,84 @@ function SessionRow({ session, onBook, booking, booked }: SessionRowProps) {
 // ─── DayBookingModal ──────────────────────────────────────────────────────────
 
 interface DayBookingModalProps {
-  open:     boolean;
-  dateKey:  string | null;
-  sessions: SessionResponse[];
-  onClose:  () => void;
+  open:       boolean;
+  dateKey:    string | null;
+  sessions:   SessionResponse[];
+  onClose:    () => void;
+  onBooked?:    (sessionId: string) => void;
+  onCancelled?: (sessionId: string) => void;
 }
 
-export function DayBookingModal({ open, dateKey, sessions, onClose }: DayBookingModalProps) {
-  const [booking,   setBooking]   = useState<string | null>(null);
-  const [bookedIds, setBookedIds] = useState<Set<string>>(new Set());
-  const [error,     setError]     = useState<string | null>(null);
-  const [sessionList, setSessionList] = useState<SessionResponse[]>(sessions);
+export function DayBookingModal({ open, dateKey, sessions, onClose, onBooked, onCancelled }: DayBookingModalProps) {
+  const [processing,   setProcessing]   = useState<string | null>(null);
+  // sessionId → bookingId (активная бронь)
+  const [bookingMap,   setBookingMap]   = useState<Record<string, string>>({});
+  const [sessionList,  setSessionList]  = useState<SessionResponse[]>(sessions);
+  const [error,        setError]        = useState<string | null>(null);
 
-  // Синхронизируем список сессий при открытии нового дня
-  const [lastDateKey, setLastDateKey] = useState<string | null>(null);
-  if (dateKey !== lastDateKey) {
-    setLastDateKey(dateKey);
+  // При открытии загружаем актуальные брони пользователя для этих сессий
+  useEffect(() => {
+    if (!open || sessions.length === 0) {
+      setSessionList(sessions);
+      setBookingMap({});
+      setError(null);
+      return;
+    }
     setSessionList(sessions);
-    setBookedIds(new Set());
     setError(null);
-  }
+
+    bookingsApi.listMy()
+      .then((bookings: BookingResponse[]) => {
+        const sessionIds = new Set(sessions.map((s) => s.id));
+        const map: Record<string, string> = {};
+        for (const b of bookings) {
+          if (sessionIds.has(b.session_id) && b.status === "booked") {
+            map[b.session_id] = b.id;
+          }
+        }
+        setBookingMap(map);
+      })
+      .catch(() => {/* тихо */});
+  }, [open, dateKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleBook(sessionId: string) {
-    setBooking(sessionId);
+    setProcessing(sessionId);
     setError(null);
     try {
-      await bookingsApi.create(sessionId);
-      setBookedIds((prev) => new Set(prev).add(sessionId));
-      // Уменьшаем счётчик свободных мест локально
+      const booking = await bookingsApi.create(sessionId);
+      setBookingMap((prev) => ({ ...prev, [sessionId]: booking.id }));
       setSessionList((prev) =>
-        prev.map((s) =>
-          s.id === sessionId ? { ...s, booked_count: s.booked_count + 1 } : s,
-        ),
+        prev.map((s) => s.id === sessionId ? { ...s, booked_count: s.booked_count + 1 } : s),
       );
+      onBooked?.(sessionId);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number; data?: { detail?: string } } })?.response?.status;
       const msg    = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      if (status === 409) {
-        setError("Место уже занято или вы уже записаны на эту сессию");
-      } else {
-        setError(typeof msg === "string" ? msg : "Не удалось забронировать");
-      }
+      setError(status === 409 ? "Вы уже записаны или мест нет" : (typeof msg === "string" ? msg : "Не удалось забронировать"));
     } finally {
-      setBooking(null);
+      setProcessing(null);
+    }
+  }
+
+  async function handleCancel(bookingId: string, sessionId: string) {
+    setProcessing(sessionId);
+    setError(null);
+    try {
+      await bookingsApi.cancel(bookingId);
+      setBookingMap((prev) => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+      setSessionList((prev) =>
+        prev.map((s) => s.id === sessionId ? { ...s, booked_count: Math.max(0, s.booked_count - 1) } : s),
+      );
+      onCancelled?.(sessionId);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(typeof msg === "string" ? msg : "Не удалось отменить запись");
+    } finally {
+      setProcessing(null);
     }
   }
 
@@ -186,8 +235,7 @@ export function DayBookingModal({ open, dateKey, sessions, onClose }: DayBooking
               </Typography>
               <Typography sx={{
                 fontFamily: "var(--font-display)", fontSize: "18px",
-                fontWeight: 400, color: brand.cocoa, lineHeight: 1.1,
-                textTransform: "capitalize",
+                fontWeight: 400, color: brand.cocoa, lineHeight: 1.1, textTransform: "capitalize",
               }}>
                 {dateKey ? fmtDate(dateKey) : ""}
               </Typography>
@@ -214,9 +262,10 @@ export function DayBookingModal({ open, dateKey, sessions, onClose }: DayBooking
                 <SessionRow
                   key={session.id}
                   session={session}
+                  bookingId={bookingMap[session.id] ?? null}
                   onBook={handleBook}
-                  booking={booking === session.id}
-                  booked={bookedIds.has(session.id)}
+                  onCancel={handleCancel}
+                  processing={processing === session.id}
                 />
               ))
             )}

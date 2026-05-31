@@ -7,3 +7,5 @@ export { sessionsApi } from "./endpoints/sessions";
 export { daysApi } from "./endpoints/days";
 export { bookingsApi } from "./endpoints/bookings";
 export { subscriptionPlansApi, subscriptionsApi } from "./endpoints/subscriptions";
+export { currencyApi } from "./endpoints/currency";
+export type { CurrencyInfo } from "./endpoints/currency";

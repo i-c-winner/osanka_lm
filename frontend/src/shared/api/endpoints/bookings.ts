@@ -5,6 +5,12 @@ export const bookingsApi = {
   list: () =>
     apiClient.get<BookingResponse[]>("/bookings").then((r) => r.data),
 
+  listMy: () =>
+    apiClient.get<BookingResponse[]>("/bookings").then((r) => r.data),
+
   create: (sessionId: string) =>
     apiClient.post<BookingResponse>(`/bookings/?session_id=${sessionId}`).then((r) => r.data),
+
+  cancel: (bookingId: string) =>
+    apiClient.post<BookingResponse>(`/bookings/${bookingId}/cancel`).then((r) => r.data),
 };
