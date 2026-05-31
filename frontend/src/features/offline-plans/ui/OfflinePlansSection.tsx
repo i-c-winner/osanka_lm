@@ -45,10 +45,13 @@ function calcDates(plan: SubscriptionPlanResponse): PlanDates {
     const totalDays = daysInMonth(now.getFullYear(), now.getMonth());
     const remainingDays = totalDays - now.getDate() + 1;
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // последний день месяца
-    const proratedPrice = Math.ceil((plan.price / totalDays) * remainingDays);
     const proratedSessions = plan.sessions_limit != null
       ? Math.ceil((plan.sessions_limit / totalDays) * remainingDays)
       : undefined;
+    // Цена пропорционально оставшимся занятиям, если лимит задан; иначе — по дням
+    const proratedPrice = plan.sessions_limit != null && proratedSessions != null
+      ? Math.ceil((plan.price / plan.sessions_limit) * proratedSessions)
+      : Math.ceil((plan.price / totalDays) * remainingDays);
     return { start, end, proratedPrice, proratedSessions };
   }
 
