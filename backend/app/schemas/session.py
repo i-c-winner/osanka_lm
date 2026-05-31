@@ -38,7 +38,8 @@ class SessionUpdate(BaseModel):
 
 
 class SessionResponse(SessionBase):
-    id: UUID
+    id:          UUID
+    booked_count: int = 0
 
     class Config:
         from_attributes = True

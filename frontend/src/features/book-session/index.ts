@@ -1,1 +1,1 @@
-// Удалено.
+export { DayBookingModal } from "./ui/DayBookingModal";

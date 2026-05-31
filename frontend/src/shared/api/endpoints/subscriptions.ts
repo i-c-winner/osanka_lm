@@ -1,5 +1,5 @@
 import { apiClient } from "../client";
-import type { SubscriptionPlanResponse, SubscriptionPlanCreate, SubscriptionPlanUpdate } from "../types";
+import type { SubscriptionPlanResponse, SubscriptionPlanCreate, SubscriptionPlanUpdate, SubscriptionResponse } from "../types";
 
 export const subscriptionPlansApi = {
   listActive: () =>
@@ -13,4 +13,12 @@ export const subscriptionPlansApi = {
 
   update: (id: string, data: SubscriptionPlanUpdate) =>
     apiClient.patch<SubscriptionPlanResponse>(`/subscription-plans/${id}`, data).then((r) => r.data),
+};
+
+export const subscriptionsApi = {
+  create: (planId: string) =>
+    apiClient.post<SubscriptionResponse>(`/subscriptions/?plan_id=${planId}`).then((r) => r.data),
+
+  listMy: () =>
+    apiClient.get<SubscriptionResponse[]>("/subscriptions/").then((r) => r.data),
 };

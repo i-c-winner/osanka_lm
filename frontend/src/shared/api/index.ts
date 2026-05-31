@@ -6,4 +6,4 @@ export { locationsApi } from "./endpoints/locations";
 export { sessionsApi } from "./endpoints/sessions";
 export { daysApi } from "./endpoints/days";
 export { bookingsApi } from "./endpoints/bookings";
-export { subscriptionPlansApi } from "./endpoints/subscriptions";
+export { subscriptionPlansApi, subscriptionsApi } from "./endpoints/subscriptions";

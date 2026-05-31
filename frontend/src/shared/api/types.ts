@@ -59,6 +59,7 @@ export interface SessionResponse {
   class_type_id?: string;
   status: SessionStatus;
   location_id?: string;
+  booked_count: number;
 }
 
 export interface SessionCreate {
