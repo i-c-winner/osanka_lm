@@ -25,7 +25,7 @@ async def _get_active_subscription(user_id, db: AsyncSession):
             Subscription.user_id == user_id,
             Subscription.status == "active",
             (Subscription.expires_at == None) | (Subscription.expires_at > now),
-        )
+        ).limit(1)
     )
     return result.scalar_one_or_none()
 

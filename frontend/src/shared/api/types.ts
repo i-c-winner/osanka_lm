@@ -59,6 +59,7 @@ export interface SessionResponse {
   class_type_id?: string;
   status: SessionStatus;
   location_id?: string;
+  booked_count: number;
 }
 
 export interface SessionCreate {
@@ -94,12 +95,14 @@ export interface SubscriptionPlanResponse {
   name: string;
   description?: string;
   price: number;
-  currency: string;
   sessions_limit?: number;
   is_unlimited: boolean;
   is_calendar_month: boolean;
-  duration_days?: number;
+  duration_days: number;
+  freeze_days_limit?: number;
   is_active: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface SubscriptionPlanCreate {
@@ -107,11 +110,24 @@ export interface SubscriptionPlanCreate {
   name: string;
   description?: string;
   price: number;
-  currency: string;
+  sessions_limit?: number;
+  is_unlimited?: boolean;
+  is_calendar_month?: boolean;
+  duration_days: number;
+  freeze_days_limit?: number;
+  is_active?: boolean;
+}
+
+export interface SubscriptionPlanUpdate {
+  code?: string;
+  name?: string;
+  description?: string;
+  price?: number;
   sessions_limit?: number;
   is_unlimited?: boolean;
   is_calendar_month?: boolean;
   duration_days?: number;
+  freeze_days_limit?: number;
   is_active?: boolean;
 }
 

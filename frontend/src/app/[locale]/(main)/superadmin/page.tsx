@@ -31,6 +31,9 @@ import { usersApi, locationsApi, daysApi } from "@/shared/api";
 import type { MeResponse, LocationResponse, DayResponse } from "@/shared/api";
 import { SessionsTab } from "@/features/sessions/ui/SessionsTab";
 import { MONTH_RU, DOW_RU, toISO, buildGrid } from "@/shared/lib/calendar";
+import { MonthCalendar } from "@/entities/calendar";
+import { useAdminCalendarDays, DaySessionsModal } from "@/features/superadmin-calendar";
+import { OfflinePlansTab } from "@/features/offline-plans";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -663,6 +666,58 @@ function DaysTab() {
   );
 }
 
+// ─── Вкладка «Календарь» ─────────────────────────────────────────────────────
+
+function CalendarTab() {
+  const { getDayData, sessionsByDate, loading, error, reload } = useAdminCalendarDays();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: "40px" }}>
+        <CircularProgress size={28} sx={{ color: brand.terracotta }} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ py: "24px", textAlign: "center" }}>
+        <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.terracotta, mb: "12px" }}>
+          {error}
+        </Typography>
+        <Button
+          onClick={reload}
+          variant="outlined"
+          size="small"
+          sx={{
+            fontFamily: "var(--font-body)", fontSize: "13px", textTransform: "none",
+            borderColor: alpha(brand.line, 0.8), color: brand.cocoa,
+            "&:hover": { borderColor: brand.cocoa, backgroundColor: alpha(brand.line, 0.3) },
+          }}
+        >
+          Повторить
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      <MonthCalendar
+        getDayData={getDayData}
+        onDayClick={(dateKey) => setSelectedDate(dateKey)}
+      />
+      <DaySessionsModal
+        open={!!selectedDate}
+        dateKey={selectedDate}
+        sessions={selectedDate ? (sessionsByDate[selectedDate] ?? []) : []}
+        onClose={() => setSelectedDate(null)}
+      />
+    </>
+  );
+}
+
 function DashboardsTab() {
   return (
     <Box>
@@ -679,11 +734,13 @@ function DashboardsTab() {
 // ─── Страница ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { label: "Users",      component: <UsersTab />      },
-  { label: "Locale",     component: <LocaleTab />     },
-  { label: "Сессии",     component: <SessionsTab />   },
-  { label: "Дни",        component: <DaysTab />       },
-  { label: "Dashboards", component: <DashboardsTab /> },
+  { label: "Users",           component: <UsersTab />         },
+  { label: "Locale",          component: <LocaleTab />        },
+  { label: "Сессии",          component: <SessionsTab />      },
+  { label: "Дни",             component: <DaysTab />          },
+  { label: "Планы офлайн",    component: <OfflinePlansTab />  },
+  { label: "Календарь",       component: <CalendarTab />      },
+  { label: "Dashboards",      component: <DashboardsTab />    },
 ];
 
 export default function SuperAdminPage() {

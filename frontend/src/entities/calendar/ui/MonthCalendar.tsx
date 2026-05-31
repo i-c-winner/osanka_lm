@@ -8,45 +8,8 @@ import { brand }   from "@/shared/theme";
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import type { DayCellMountArg } from "@fullcalendar/core";
-
-// ─── Данные дней ─────────────────────────────────────────────────────────────
-
-type SessionBar = "practice" | "mobility" | "live";
-
-interface DayData {
-  isDone?: boolean;
-  isLive?: boolean;
-  bars: SessionBar[];
-}
-
-const BAR_COLOR: Record<SessionBar, string> = {
-  practice: brand.terracotta,
-  mobility: brand.sage,
-  live:     brand.gold,
-};
-
-const DAY_MAP: Record<string, DayData> = {
-  "2026-11-02": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-03": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-05": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-06": { isDone: true, isLive: true, bars: ["practice"] },
-  "2026-11-07": { isDone: true, bars: ["practice"] },
-  "2026-11-09": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-10": { isDone: true, bars: ["practice", "mobility"] },
-  "2026-11-11": { bars: ["practice"] },
-  "2026-11-12": { bars: ["practice"] },
-  "2026-11-13": { isLive: true, bars: ["live"] },
-  "2026-11-17": { bars: ["mobility"] },
-  "2026-11-20": { isLive: true, bars: ["live"] },
-  "2026-11-27": { isLive: true, bars: ["live"] },
-};
-
-function toKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import type { GetDayData } from "@/entities/calendar/model/types";
+import { BAR_COLOR } from "@/entities/calendar/model/barColors";
 
 // ─── CSS-переопределения FullCalendar ──────────────────────────────────────────
 
@@ -116,44 +79,80 @@ const FC_STYLES = `
   }
 `;
 
+// ─── Утилиты ──────────────────────────────────────────────────────────────────
+
+function toKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+const MONTH_NAMES_RU = [
+  "Январь","Февраль","Март","Апрель","Май","Июнь",
+  "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь",
+];
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface MonthCalendarProps {
+  getDayData:   GetDayData;
+  onDayClick?:  (dateKey: string) => void;
+}
+
 // ─── MonthCalendar ────────────────────────────────────────────────────────────
 
-export function MonthCalendar() {
-  const calRef     = useRef<HTMLDivElement>(null);
-  const calInstance = useRef<Calendar | null>(null);
+export function MonthCalendar({ getDayData, onDayClick }: MonthCalendarProps) {
+  const calRef        = useRef<HTMLDivElement>(null);
+  const calInstance   = useRef<Calendar | null>(null);
+  const getDayDataRef = useRef<GetDayData>(getDayData);
+  const onDayClickRef = useRef(onDayClick);
+  // dateKey → { frame, date, isOther } для ручного перерендера
+  const cellsRef      = useRef<Map<string, { frame: HTMLElement; date: Date; isOther: boolean }>>(new Map());
+  // предыдущий вид — чтобы view effect не срабатывал на маунте
+  const prevViewRef = useRef<"week" | "month">("month");
   const [view, setView]   = useState<"week" | "month">("month");
-  const [title, setTitle] = useState<{ month: string; year: string }>({ month: "Ноябрь", year: "2026" });
+  const today = new Date();
+  const [title, setTitle] = useState<{ month: string; year: string }>({
+    month: MONTH_NAMES_RU[today.getMonth()],
+    year:  String(today.getFullYear()),
+  });
 
-  const MONTH_NAMES_RU = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  // Всегда держим refs актуальными
+  getDayDataRef.current = getDayData;
+  onDayClickRef.current = onDayClick;
 
   function updateTitle(cal: Calendar) {
     const d = cal.getDate();
     setTitle({ month: MONTH_NAMES_RU[d.getMonth()], year: String(d.getFullYear()) });
   }
 
-  // Рендер содержимого ячейки через DOM
-  function renderDayCell(arg: DayCellMountArg) {
-    const key      = toKey(arg.date);
-    const data     = DAY_MAP[key];
-    const isToday  = arg.el.closest(".fc-day-today") !== null;
-    const isOther  = arg.el.closest(".fc-day-other") !== null;
+  function makeBookingDot(isToday: boolean): HTMLElement {
+    const dot = document.createElement("div");
+    dot.style.cssText = `
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background-color: ${isToday ? brand.ivory : brand.terracotta};
+      margin-top: 4px; align-self: flex-start;
+    `;
+    return dot;
+  }
 
-    const frame = arg.el.querySelector(".fc-daygrid-day-frame") as HTMLElement | null;
-    if (!frame) return;
+  function fillFrame(frame: HTMLElement, date: Date, isOther: boolean) {
+    const key     = toKey(date);
+    const isToday = frame.closest(".fc-day-today") !== null;
+    const data    = getDayDataRef.current(key);
 
-    // очищаем стандартный контент FC
     frame.innerHTML = "";
 
     const inner = document.createElement("div");
     inner.className = "fc-day-custom-inner";
     inner.style.cssText = "display:flex;flex-direction:column;justify-content:space-between;height:100%;";
 
-    // Верхняя строка: число + бейджи
     const top = document.createElement("div");
     top.style.cssText = "display:flex;align-items:flex-start;justify-content:space-between;";
 
     const num = document.createElement("span");
-    num.textContent = String(arg.date.getDate());
+    num.textContent = String(date.getDate());
     num.style.cssText = `
       font-family: var(--font-body);
       font-size: 13px;
@@ -162,89 +161,75 @@ export function MonthCalendar() {
       line-height: 1;
     `;
     top.appendChild(num);
+    inner.appendChild(top);
 
-    if (data) {
-      const badges = document.createElement("div");
-      badges.style.cssText = "display:flex;align-items:center;gap:2px;";
+    if (data?.slots && data.slots.length > 0) {
+      const slotsEl = document.createElement("div");
+      slotsEl.style.cssText = "display:flex;flex-direction:column;gap:3px;margin-top:6px;";
 
-      if (data.isDone) {
-        const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        check.setAttribute("viewBox", "0 0 14 14");
-        check.setAttribute("width", "14");
-        check.setAttribute("height", "14");
-        check.style.cssText = `
-          background:${alpha(brand.sage, 0.2)};
-          border-radius:50%;
-          padding:3px;
-          box-sizing:border-box;
-        `;
-        const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-        poly.setAttribute("points", "2,7 5,11 12,3");
-        poly.setAttribute("fill", "none");
-        poly.setAttribute("stroke", brand.sage);
-        poly.setAttribute("stroke-width", "2");
-        poly.setAttribute("stroke-linecap", "round");
-        poly.setAttribute("stroke-linejoin", "round");
-        check.appendChild(poly);
-        badges.appendChild(check);
-      }
+      data.slots.forEach((slot) => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:4px;";
 
-      if (data.isLive) {
-        const live = document.createElement("span");
-        live.textContent = "LIVE";
-        live.style.cssText = `
+        const timeEl = document.createElement("span");
+        timeEl.textContent = slot.time;
+        timeEl.style.cssText = `
           font-family: var(--font-body);
-          font-weight: 700;
-          font-size: 8px;
-          letter-spacing: 0.05em;
-          line-height: 1.2;
-          padding: 1px 3px;
-          border-radius: 4px;
-          background: ${data.isDone ? brand.terracotta : alpha(brand.terracotta, 0.12)};
-          color: ${data.isDone ? "#fff" : brand.terracottaDeep};
+          font-size: 10px;
+          font-weight: 500;
+          color: ${isToday ? alpha(brand.ivory, 0.85) : brand.cocoaSoft};
+          line-height: 1;
         `;
-        badges.appendChild(live);
-      }
+        row.appendChild(timeEl);
 
-      top.appendChild(badges);
-
-      // Бары внизу
-      if (data.bars.length > 0) {
-        const bars = document.createElement("div");
-        bars.style.cssText = "display:flex;flex-direction:column;gap:2px;margin-top:6px;";
-        data.bars.forEach((type) => {
-          const bar = document.createElement("div");
-          bar.style.cssText = `
-            height: 2.5px;
-            border-radius: 2px;
-            width: ${type === "practice" ? "70%" : "45%"};
-            background-color: ${isToday ? alpha(brand.ivory, 0.4) : BAR_COLOR[type]};
+        if (slot.booked) {
+          const dot = document.createElement("div");
+          dot.style.cssText = `
+            width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+            background-color: ${isToday ? brand.ivory : brand.terracotta};
           `;
-          bars.appendChild(bar);
-        });
-        inner.appendChild(top);
-        inner.appendChild(bars);
-        frame.appendChild(inner);
-        return;
-      }
+          row.appendChild(dot);
+        }
+
+        slotsEl.appendChild(row);
+      });
+
+      inner.appendChild(slotsEl);
     }
 
-    inner.appendChild(top);
     frame.appendChild(inner);
+  }
+
+  function renderDayCell(arg: DayCellMountArg) {
+    const key     = toKey(arg.date);
+    const isOther = arg.el.closest(".fc-day-other") !== null;
+
+    const frame = arg.el.querySelector(".fc-daygrid-day-frame") as HTMLElement | null;
+    if (!frame) return;
+
+    // Сохраняем ссылку на ячейку для последующего обновления
+    cellsRef.current.set(key, { frame, date: arg.date, isOther });
+
+    if (!isOther && onDayClickRef.current) {
+      frame.style.cursor = "pointer";
+      frame.onclick = () => onDayClickRef.current?.(key);
+    }
+
+    fillFrame(frame, arg.date, isOther);
   }
 
   useEffect(() => {
     if (!calRef.current) return;
 
     const cal = new Calendar(calRef.current, {
-      plugins:        [dayGridPlugin],
-      initialView:    "dayGridMonth",
-      initialDate:    "2026-11-01",
-      locale:         "ru",
-      firstDay:       1,
-      headerToolbar:  false,
-      fixedWeekCount: false,
-      height:         "auto",
+      plugins:         [dayGridPlugin],
+      initialView:     "dayGridMonth",
+      initialDate:     new Date(),
+      locale:          "ru",
+      firstDay:        1,
+      headerToolbar:   false,
+      fixedWeekCount:  false,
+      height:          "auto",
       dayCellDidMount: renderDayCell,
     });
 
@@ -252,17 +237,27 @@ export function MonthCalendar() {
     calInstance.current = cal;
     updateTitle(cal);
 
-    return () => { cal.destroy(); calInstance.current = null; };
+    return () => { cal.destroy(); calInstance.current = null; cellsRef.current.clear(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Смена вида
   useEffect(() => {
+    // Пропускаем если вид не изменился (включая первый запуск)
+    if (prevViewRef.current === view) return;
+    prevViewRef.current = view;
     const cal = calInstance.current;
     if (!cal) return;
+    cellsRef.current.clear(); // ячейки пересоздадутся через dayCellDidMount
     cal.changeView(view === "month" ? "dayGridMonth" : "dayGridWeek");
     updateTitle(cal);
   }, [view]);
+
+  // Перерисовываем все сохранённые ячейки напрямую через DOM
+  useEffect(() => {
+    cellsRef.current.forEach(({ frame, date, isOther }) => {
+      fillFrame(frame, date, isOther);
+    });
+  }, [getDayData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function goToday() {
     calInstance.current?.today();
@@ -285,10 +280,8 @@ export function MonthCalendar() {
       overflow: "hidden",
       boxShadow: `0 2px 12px -4px ${alpha(brand.cocoa, 0.07)}`,
     }}>
-      {/* Инжект CSS */}
       <style>{FC_STYLES}</style>
 
-      {/* Шапка */}
       <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", mb: "24px", flexWrap: "wrap", gap: "12px" }}>
         <Box>
           <Typography className="eyebrow" sx={{ display: "block", mb: "4px" }}>Календарь</Typography>
@@ -298,7 +291,6 @@ export function MonthCalendar() {
           </Typography>
         </Box>
 
-        {/* Контролы */}
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
           <Box onClick={goToday} sx={{
             borderRadius: "100px", border: `1px solid ${alpha(brand.line, 0.8)}`,
@@ -334,7 +326,6 @@ export function MonthCalendar() {
         </Box>
       </Box>
 
-      {/* FullCalendar */}
       <Box className="fc-osanka" ref={calRef} />
     </Box>
   );

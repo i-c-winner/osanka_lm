@@ -22,6 +22,8 @@ import { brand }                from "@/shared/theme";
 import { tokenStorage }         from "@/shared/lib/token";
 import { userStorage }          from "@/shared/lib/userStorage";
 import { CalendarView }         from "@/entities/calendar";
+import { useCalendarDays }      from "@/features/calendar-days";
+import { OfflinePlansSection }  from "@/features/offline-plans";
 
 // ─── Типы ─────────────────────────────────────────────────────────────────────
 
@@ -270,7 +272,9 @@ function MobileNav({
 // ─── Основной контент ─────────────────────────────────────────────────────────
 
 function MainContent({ section }: { section: NavKey }) {
-  if (section === "calendar") return <CalendarView />;
+  const { getDayData } = useCalendarDays();
+  if (section === "calendar") return <CalendarView getDayData={getDayData} />;
+  if (section === "sessions") return <OfflinePlansSection />;
   return (
     <Box component="main" sx={{ flex: 1, minWidth: 0, pt: "8px" }}>
       <Typography variant="h3" sx={{ mb: "8px" }}>{SECTION_LABELS[section]}</Typography>

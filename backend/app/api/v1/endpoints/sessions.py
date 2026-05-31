@@ -1,11 +1,12 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.models.booking import Booking
 from app.models.session import Session
 from app.models.user import User
 from app.schemas.session import SessionCreate, SessionResponse, SessionUpdate
@@ -61,13 +62,31 @@ async def create_session(
     return session
 
 
+async def _with_booked_counts(sessions: list[Session], db: AsyncSession) -> list[dict]:
+    """Добавляет booked_count к каждой сессии."""
+    if not sessions:
+        return []
+    session_ids = [s.id for s in sessions]
+    counts_result = await db.execute(
+        select(Booking.session_id, func.count(Booking.id).label("cnt"))
+        .where(Booking.session_id.in_(session_ids), Booking.status != "cancelled")
+        .group_by(Booking.session_id)
+    )
+    counts = {row.session_id: row.cnt for row in counts_result}
+    return [
+        {**s.__dict__, "booked_count": counts.get(s.id, 0)}
+        for s in sessions
+    ]
+
+
 @router.get("/", response_model=list[SessionResponse])
 async def list_sessions(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Session).order_by(Session.starts_at))
-    return result.scalars().all()
+    sessions = result.scalars().all()
+    return await _with_booked_counts(sessions, db)
 
 
 @router.get("/{session_id}", response_model=SessionResponse)
