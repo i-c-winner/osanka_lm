@@ -3,20 +3,20 @@ import { createTheme, alpha } from "@mui/material/styles";
 // ─── Brand tokens ─────────────────────────────────────────────────────────────
 
 const brand = {
-  cream:           "#F4ECDE",
-  cream2:          "#EFE4D1",
-  shell:           "#FBF6EC",
-  ivory:           "#FFFCF6",
-  cocoa:           "#2B2018",
-  cocoaSoft:       "#4A3A2E",
-  mute:            "#8A7563",
-  line:            "#E3D4BD",
-  terracotta:      "#C26B4A",
-  terracottaDeep:  "#A8553A",
-  blush:           "#E8C0A8",
-  rose:            "#D89B85",
-  sage:            "#8C9A7A",
-  gold:            "#B5916A",
+  cream:           "#FCE0D0",   // светлый нюдовый — основной фон
+  cream2:          "#F5CEBF",   // чуть темнее для вторичных фонов
+  shell:           "#FEF0EA",   // очень светлый нюдовый
+  ivory:           "#FFF8F5",   // почти белый с тёплым тоном
+  cocoa:           "#3D1A1C",   // очень тёмный ягодный — основной текст
+  cocoaSoft:       "#793435",   // глубокий ягодный — вторичный текст
+  mute:            "#B87A80",   // приглушённый розово-ягодный
+  line:            "#E0B4B3",   // пудрово-розовый — линии и бордеры
+  terracotta:      "#A83D56",   // насыщенный тёмно-розовый — основной акцент
+  terracottaDeep:  "#8A2E46",   // более тёмный акцент
+  blush:           "#F2D0D0",   // очень светло-розовый
+  rose:            "#E0B4B3",   // пудрово-розовый
+  sage:            "#7A9C80",   // зелёный (success)
+  gold:            "#C49070",   // тёплый золотистый
 } as const;
 
 const fonts = {
