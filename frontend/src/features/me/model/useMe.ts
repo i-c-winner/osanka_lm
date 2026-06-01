@@ -7,10 +7,14 @@ import type { MeResponse } from "@/shared/api";
 
 export function useMe() {
   const [me, setMe] = useState<MeResponse | null>(() => userStorage.get());
-  const [loading, setLoading] = useState(() => userStorage.get() === null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Не делаем запрос если пользователь не авторизован
+    if (!localStorage.getItem("access_token")) return;
+
+    setLoading(true);
     usersApi
       .getMe()
       .then((fresh) => {
