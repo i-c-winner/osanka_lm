@@ -161,6 +161,18 @@ export function MonthCalendar({ getDayData, onDayClick }: MonthCalendarProps) {
       line-height: 1;
     `;
     top.appendChild(num);
+
+    // Маркер наличия сессий (admin-вид)
+    if (data?.hasSessions && !isOther) {
+      const dot = document.createElement("div");
+      dot.style.cssText = `
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        background-color: ${isToday ? brand.ivory : brand.terracotta};
+        margin-top: 1px;
+      `;
+      top.appendChild(dot);
+    }
+
     inner.appendChild(top);
 
     if (data?.slots && data.slots.length > 0) {
