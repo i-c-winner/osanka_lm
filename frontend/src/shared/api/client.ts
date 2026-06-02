@@ -1,5 +1,9 @@
 import axios from "axios";
-import { API_BASE_URL } from "@/shared/config";
+
+const RAW_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+
+// Принудительно https:// — на случай если переменная была встроена с http://
+const API_BASE_URL = RAW_URL.replace(/^http:\/\/(?!localhost)/, "https://");
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -24,7 +28,6 @@ apiClient.interceptors.response.use(
       localStorage.removeItem("access_token");
       sessionStorage.removeItem("user_profile");
       document.cookie = "access_token=; path=/; max-age=0; SameSite=Lax";
-      // Редиректим на логин только если токен был (протух), а не для публичных запросов
       if (hadToken) {
         window.location.href = "/login";
       }
