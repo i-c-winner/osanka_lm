@@ -1,13 +1,9 @@
-function resolveApiUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
-  // Если страница открыта по HTTPS — принудительно апгрейдим http:// → https://
-  if (typeof window !== "undefined" && window.location.protocol === "https:") {
-    return url.replace(/^http:\/\//, "https://");
-  }
-  return url;
-}
-
-export const API_BASE_URL = resolveApiUrl();
+// В браузере используем относительный путь — Next.js проксирует на бэкенд через rewrites
+// На сервере (SSR) используем прямой URL бэкенда
+export const API_BASE_URL =
+  typeof window !== "undefined"
+    ? "/api/v1"
+    : (process.env.BACKEND_URL ?? "http://localhost:8000") + "/api/v1";
 
 export const LOCALES = ["ru", "uz", "kz"] as const;
 export type Locale = (typeof LOCALES)[number];
