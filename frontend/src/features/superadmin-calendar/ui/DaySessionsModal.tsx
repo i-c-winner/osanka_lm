@@ -48,9 +48,16 @@ interface SessionCardProps {
 function SessionCard({ session, bookings, usersMap, locationsMap }: SessionCardProps) {
   const trainer  = session.trainer_id ? usersMap[session.trainer_id] : undefined;
   const location = session.location_id ? locationsMap[session.location_id] : undefined;
-  const clients  = bookings
-    .filter((b) => b.status !== "cancelled")
-    .map((b) => usersMap[b.user_id]);
+  // Оставляем только последнюю бронь на каждого пользователя
+  const latestByUser = Object.values(
+    bookings.reduce<Record<string, BookingResponse>>((acc, b) => {
+      const prev = acc[b.user_id];
+      if (!prev || b.booked_at > prev.booked_at) acc[b.user_id] = b;
+      return acc;
+    }, {})
+  );
+  const activeBookings    = latestByUser.filter((b) => b.status !== "cancelled");
+  const cancelledBookings = latestByUser.filter((b) => b.status === "cancelled");
 
   const STATUS_LABEL: Record<string, string> = {
     active:    "Активна",
@@ -114,35 +121,52 @@ function SessionCard({ session, bookings, usersMap, locationsMap }: SessionCardP
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mb: "8px" }}>
           <PeopleOutlineIcon sx={{ fontSize: 15, color: brand.cocoaSoft }} />
           <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
-            Клиенты{" "}
+            Записи{" "}
             <Box component="span" sx={{ color: brand.mute }}>
-              ({clients.length} / {session.capacity})
+              ({activeBookings.length} / {session.capacity})
             </Box>
+            {cancelledBookings.length > 0 && (
+              <Box component="span" sx={{ color: brand.terracotta, ml: "6px" }}>
+                · {cancelledBookings.length} отменено
+              </Box>
+            )}
           </Typography>
         </Box>
 
-        {clients.length === 0 ? (
+        {bookings.length === 0 ? (
           <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute, pl: "21px" }}>
             Нет записей
           </Typography>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: "4px", pl: "21px" }}>
-            {clients.map((user, i) => (
-              <Box key={i} sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Box sx={{
-                  width: 6, height: 6, borderRadius: "50%",
-                  backgroundColor: alpha(brand.cocoa, 0.3), flexShrink: 0,
-                }} />
-                <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoa }}>
-                  {userName(user)}
-                  {user?.telegram_username && (
-                    <Box component="span" sx={{ color: brand.mute, ml: "6px" }}>
-                      @{user.telegram_username}
-                    </Box>
-                  )}
-                </Typography>
-              </Box>
-            ))}
+            {activeBookings.map((b) => {
+              const user = usersMap[b.user_id];
+              return (
+                <Box key={b.id} sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: brand.sage, flexShrink: 0 }} />
+                  <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoa }}>
+                    {userName(user)}
+                    {user?.telegram_username && (
+                      <Box component="span" sx={{ color: brand.mute, ml: "6px" }}>@{user.telegram_username}</Box>
+                    )}
+                  </Typography>
+                </Box>
+              );
+            })}
+            {cancelledBookings.map((b) => {
+              const user = usersMap[b.user_id];
+              return (
+                <Box key={b.id} sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: alpha(brand.terracotta, 0.4), flexShrink: 0 }} />
+                  <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute, textDecoration: "line-through" }}>
+                    {userName(user)}
+                    {user?.telegram_username && (
+                      <Box component="span" sx={{ ml: "6px" }}>@{user.telegram_username}</Box>
+                    )}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
         )}
       </Box>

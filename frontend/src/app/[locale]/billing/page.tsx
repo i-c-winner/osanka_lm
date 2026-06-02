@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Box              from "@mui/material/Box";
 import Typography       from "@mui/material/Typography";
 import Tabs             from "@mui/material/Tabs";
@@ -10,7 +10,10 @@ import { alpha }        from "@mui/material/styles";
 import { brand }        from "@/shared/theme";
 import { useCurrency }  from "@/app/providers/CurrencyProvider";
 import { TrainerPlansSelector } from "@/features/offline-plans";
+import { useCalendarDays } from "@/features/calendar-days";
+import { subscriptionsApi, subscriptionPlansApi } from "@/shared/api";
 import type { SubscriptionPlanResponse } from "@/shared/api";
+import CircularProgress from "@mui/material/CircularProgress";
 
 // ─── Утилиты дат ──────────────────────────────────────────────────────────────
 
@@ -63,14 +66,23 @@ function calcDates(plan: SubscriptionPlanResponse): CalcResult {
 // ─── PlanPoster ───────────────────────────────────────────────────────────────
 
 interface PlanPosterProps {
-  plan:     SubscriptionPlanResponse;
-  featured: boolean;
+  plan:         SubscriptionPlanResponse;
+  featured:     boolean;
+  discountDays: number;
+  onSelect:     (planId: string, discountDays: number) => void;
+  purchasing:   boolean;
 }
 
-function PlanPoster({ plan, featured }: PlanPosterProps) {
+function PlanPoster({ plan, featured, discountDays, onSelect, purchasing }: PlanPosterProps) {
   const { formatPrice } = useCurrency();
   const { start, end, perMonth, displaySessions, displayPrice } = calcDates(plan);
   const months = Math.max(1, Math.round(plan.duration_days / 30));
+
+  // Скидка за пропущенные дни
+  const duration = plan.duration_days || lastDayOf(new Date().getFullYear(), new Date().getMonth()).getDate();
+  const discountAmount = discountDays > 0 ? Math.round((perMonth / duration) * discountDays) : 0;
+  const finalPrice = perMonth - discountAmount;
+  const hasDiscount = discountAmount > 0;
 
   const isDark    = featured;
   const bg        = isDark ? brand.cocoa : brand.ivory;
@@ -149,18 +161,41 @@ function PlanPoster({ plan, featured }: PlanPosterProps) {
 
       {/* Цена за месяц */}
       <Box sx={{ mb: "4px" }}>
-        <Typography sx={{
-          fontFamily: "var(--font-display)", fontStyle: "italic",
-          fontSize: "48px", fontWeight: 400, color: fg, lineHeight: 1,
-        }}>
-          {formatPrice(perMonth)}
-        </Typography>
-        <Typography sx={{
-          fontFamily: "var(--font-body)", fontSize: "13px",
-          color: fgMute, mt: "4px", fontStyle: "italic",
-        }}>
-          / мес
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
+          <Typography sx={{
+            fontFamily: "var(--font-display)", fontStyle: "italic",
+            fontSize: "48px", fontWeight: 400, color: fg, lineHeight: 1,
+          }}>
+            {formatPrice(finalPrice)}
+          </Typography>
+          {hasDiscount && (
+            <Typography sx={{
+              fontFamily: "var(--font-body)", fontSize: "18px",
+              color: isDark ? alpha(brand.ivory, 0.45) : brand.mute,
+              textDecoration: "line-through", lineHeight: 1,
+            }}>
+              {formatPrice(perMonth)}
+            </Typography>
+          )}
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mt: "4px", flexWrap: "wrap" }}>
+          <Typography sx={{
+            fontFamily: "var(--font-body)", fontSize: "13px",
+            color: fgMute, fontStyle: "italic",
+          }}>
+            / мес
+          </Typography>
+          {hasDiscount && (
+            <Typography sx={{
+              fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 700,
+              color: isDark ? brand.blush : brand.sage,
+              backgroundColor: isDark ? alpha(brand.blush, 0.15) : alpha(brand.sage, 0.12),
+              px: "8px", py: "2px", borderRadius: "100px",
+            }}>
+              −{discountDays} {discountDays === 1 ? "день" : "дня"} в подарок
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {/* Описание */}
@@ -214,6 +249,8 @@ function PlanPoster({ plan, featured }: PlanPosterProps) {
       <Button
         variant={isDark ? "contained" : "outlined"}
         fullWidth
+        disabled={purchasing}
+        onClick={() => onSelect(plan.id, discountDays)}
         sx={{
           backgroundColor: isDark ? brand.terracotta : "transparent",
           color: isDark ? brand.ivory : brand.cocoa,
@@ -229,7 +266,7 @@ function PlanPoster({ plan, featured }: PlanPosterProps) {
           },
         }}
       >
-        Выбрать
+        {purchasing ? "Оформляем..." : "Выбрать"}
       </Button>
     </Box>
   );
@@ -259,7 +296,33 @@ function TrainerTab() {
 const TABS = ["Онлайн занятия", "Занятия с тренером"];
 
 export default function BillingPage() {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab]       = useState(0);
+  const [plans, setPlans]   = useState<SubscriptionPlanResponse[]>([]);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [purchased, setPurchased] = useState<Set<string>>(new Set());
+  const { unbookedLastMonth } = useCalendarDays();
+  const discountDays = Math.min(unbookedLastMonth, 2);
+
+  const loadPlans = useCallback(async () => {
+    try { setPlans(await subscriptionPlansApi.listActive()); } catch { /* тихо */ }
+  }, []);
+
+  useEffect(() => { loadPlans(); }, [loadPlans]);
+
+  async function handleSelect(planId: string, discount: number) {
+    setPurchasing(planId);
+    setPurchaseError(null);
+    try {
+      await subscriptionsApi.create(planId, discount);
+      setPurchased((prev) => new Set(prev).add(planId));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setPurchaseError(typeof msg === "string" ? msg : "Не удалось оформить подписку");
+    } finally {
+      setPurchasing(null);
+    }
+  }
 
   return (
     <Box sx={{ maxWidth: "1200px", mx: "auto", px: { xs: 2, sm: 3, md: 4 }, py: { xs: "32px", md: "48px" }, width: "100%" }}>

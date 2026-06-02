@@ -73,6 +73,11 @@ async def create_booking(
     if session.status != "active":
         raise HTTPException(status_code=400, detail=f"Session is not available for booking (status: {session.status})")
 
+    now = datetime.now(timezone.utc)
+    starts_at = session.starts_at if session.starts_at.tzinfo else session.starts_at.replace(tzinfo=timezone.utc)
+    if starts_at <= now:
+        raise HTTPException(status_code=400, detail="Session has already started")
+
     # Проверяем что пользователь не забронировал эту сессию ранее
     existing_result = await db.execute(
         select(Booking).where(
@@ -168,6 +173,15 @@ async def cancel_booking(
 
     if booking.status == "cancelled":
         raise HTTPException(status_code=400, detail="Booking is already cancelled")
+
+    # Нельзя отменить после начала сессии
+    session_result = await db.execute(select(Session).where(Session.id == booking.session_id))
+    session = session_result.scalar_one_or_none()
+    if session:
+        now = datetime.now(timezone.utc)
+        starts_at = session.starts_at if session.starts_at.tzinfo else session.starts_at.replace(tzinfo=timezone.utc)
+        if starts_at <= now:
+            raise HTTPException(status_code=400, detail="Cannot cancel booking after session has started")
 
     booking.status = "cancelled"
     booking.cancelled_at = datetime.now(timezone.utc)

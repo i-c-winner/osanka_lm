@@ -36,18 +36,20 @@ function buildDayData(
 // ─── Хук ─────────────────────────────────────────────────────────────────────
 
 interface CalendarDaysState {
-  getDayData:       GetDayData;
-  sessionsByDate:   Record<string, SessionResponse[]>;
-  loading:          boolean;
-  refresh:          () => void;
-  optimisticBook:   (dateKey: string, sessionId: string) => void;
-  optimisticCancel: (dateKey: string, sessionId: string) => void;
+  getDayData:          GetDayData;
+  sessionsByDate:      Record<string, SessionResponse[]>;
+  loading:             boolean;
+  refresh:             () => void;
+  optimisticBook:      (dateKey: string, sessionId: string) => void;
+  optimisticCancel:    (dateKey: string, sessionId: string) => void;
+  unbookedLastMonth:   number; // дни прошлого месяца с сессиями без брони
 }
 
 export function useCalendarDays(): CalendarDaysState {
-  const [dayMap,         setDayMap]         = useState<Record<string, DayData>>({});
-  const [sessionsByDate, setSessionsByDate] = useState<Record<string, SessionResponse[]>>({});
-  const [loading,        setLoading]        = useState(true);
+  const [dayMap,             setDayMap]             = useState<Record<string, DayData>>({});
+  const [sessionsByDate,     setSessionsByDate]     = useState<Record<string, SessionResponse[]>>({});
+  const [unbookedLastMonth,  setUnbookedLastMonth]  = useState(0);
+  const [loading,            setLoading]            = useState(true);
   const [tick,           setTick]           = useState(0);
 
   // Храним актуальные данные в рефах для оптимистичных обновлений
@@ -95,6 +97,19 @@ export function useCalendarDays(): CalendarDaysState {
         sessionsByDateRef.current   = byDate;
         bookedSessionIdsRef.current = bookedSessionIds;
 
+        // Считаем дни прошлого месяца с сессиями без брони пользователя
+        const now = new Date();
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+        const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+        let unbookedCount = 0;
+        for (const [date, daySessions] of Object.entries(byDate)) {
+          if (date < prevMonthStart || date > prevMonthEnd) continue;
+          const hasActiveSessions = daySessions.some((s) => s.status === "active" || s.status === "completed");
+          const hasUserBooking    = daySessions.some((s) => bookedSessionIds.has(s.id));
+          if (hasActiveSessions && !hasUserBooking) unbookedCount++;
+        }
+        setUnbookedLastMonth(unbookedCount);
+
         setDayMap(result);
         setSessionsByDate(byDate);
       })
@@ -130,5 +145,5 @@ export function useCalendarDays(): CalendarDaysState {
     [dayMap],
   );
 
-  return { getDayData, sessionsByDate, loading, refresh, optimisticBook, optimisticCancel };
+  return { getDayData, sessionsByDate, loading, refresh, optimisticBook, optimisticCancel, unbookedLastMonth };
 }

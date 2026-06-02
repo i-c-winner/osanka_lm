@@ -6,11 +6,12 @@ export interface SessionSlot {
 }
 
 export interface DayData {
-  isDone?:     boolean;
-  isLive?:     boolean;
-  hasBooking?: boolean;
-  bars:        SessionBar[];
-  slots?:      SessionSlot[];
+  isDone?:      boolean;
+  isLive?:      boolean;
+  hasBooking?:  boolean;
+  hasSessions?: boolean; // есть хотя бы одна сессия (для admin-вида)
+  bars:         SessionBar[];
+  slots?:       SessionSlot[];
 }
 
 export type GetDayData = (dateKey: string) => DayData | undefined;

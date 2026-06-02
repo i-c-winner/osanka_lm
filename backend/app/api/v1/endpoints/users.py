@@ -42,6 +42,33 @@ async def list_users(
     return out
 
 
+class TrainerPublicResponse(BaseModel):
+    id:         str
+    first_name: str | None = None
+    last_name:  str | None = None
+
+
+@router.get("/trainers", response_model=list[TrainerPublicResponse])
+async def list_trainers(db: AsyncSession = Depends(get_db)):
+    """Публичный список тренеров — только id и имя, авторизация не требуется."""
+    trainer_role_result = await db.execute(
+        select(Role).where(Role.role == "trainer")
+    )
+    trainer_role = trainer_role_result.scalar_one_or_none()
+    if not trainer_role:
+        return []
+    result = await db.execute(
+        select(User)
+        .join(UserRole, UserRole.user_id == User.id)
+        .where(UserRole.role_id == trainer_role.id, User.is_active == True)
+    )
+    users = result.scalars().all()
+    return [
+        TrainerPublicResponse(id=str(u.id), first_name=u.first_name, last_name=u.last_name)
+        for u in users
+    ]
+
+
 @router.get("/me", response_model=MeResponse)
 async def get_me(
     current_user: User = Depends(get_current_user),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -9,22 +9,33 @@ import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import TelegramIcon from "@mui/icons-material/Telegram";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/shared/i18n/navigation";
+import { useRouter, usePathname } from "@/shared/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "../model/useAuth";
 import { brand } from "@/shared/theme";
 
 export function LoginForm() {
-  const t = useTranslations("auth");
+  const t            = useTranslations("auth");
   const { login, loading, error } = useAuth();
   const [telegramId, setTelegramId] = useState("");
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+
+  // Если уже залогинен — редиректим сразу
+  useEffect(() => {
+    if (localStorage.getItem("access_token")) {
+      const from = searchParams.get("from") ?? "/my-space";
+      router.replace(from as "/my-space");
+    }
+  }, [router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!telegramId.trim()) return;
     try {
       await login({ telegram_id: telegramId.trim() });
-      router.push("/main");
+      const from = searchParams.get("from") ?? "/my-space";
+      router.push(from as "/my-space");
     } catch {
       // ошибка обрабатывается в хуке
     }

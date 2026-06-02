@@ -3,26 +3,26 @@
 /* ─── CSS Variables ────────────────────────────────────────────────────────── */
 :root {
   /* Surfaces */
-  --color-cream:           #F4ECDE;
-  --color-cream-2:         #EFE4D1;
-  --color-shell:           #FBF6EC;
-  --color-ivory:           #FFFCF6;
+  --color-cream:           #FCE0D0;
+  --color-cream-2:         #F5CEBF;
+  --color-shell:           #FEF0EA;
+  --color-ivory:           #FFF8F5;
 
   /* Text */
-  --color-cocoa:           #2B2018;
-  --color-cocoa-soft:      #4A3A2E;
-  --color-mute:            #8A7563;
+  --color-cocoa:           #3D1A1C;
+  --color-cocoa-soft:      #793435;
+  --color-mute:            #B87A80;
 
   /* Lines */
-  --color-line:            #E3D4BD;
+  --color-line:            #E0B4B3;
 
   /* Accents */
-  --color-terracotta:      #C26B4A;
-  --color-terracotta-deep: #A8553A;
-  --color-blush:           #E8C0A8;
-  --color-rose:            #D89B85;
-  --color-sage:            #8C9A7A;
-  --color-gold:            #B5916A;
+  --color-terracotta:      #A83D56;
+  --color-terracotta-deep: #8A2E46;
+  --color-blush:           #F2D0D0;
+  --color-rose:            #E0B4B3;
+  --color-sage:            #7A9C80;
+  --color-gold:            #C49070;
 
   /* Fonts */
   --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
@@ -78,7 +78,7 @@ body {
 
 body {
   min-height: 100%;
-  background: var(--color-cream);
+  background: var(--color-shell);
   color: var(--color-cocoa);
   font-family: var(--font-body);
 }

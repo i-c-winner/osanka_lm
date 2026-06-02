@@ -19,7 +19,7 @@ function buildDayData(sessions: SessionResponse[]): DayData {
     .slice(0, 3)
     .map((): DayData["bars"][number] => "practice");
 
-  return { isDone, bars };
+  return { isDone, bars, hasSessions: true };
 }
 
 // ─── Хук ─────────────────────────────────────────────────────────────────────

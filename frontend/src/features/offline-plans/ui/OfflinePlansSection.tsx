@@ -401,6 +401,7 @@ export function OfflinePlansSection() {
     refresh: refreshCalendar,
     optimisticBook,
     optimisticCancel,
+    unbookedLastMonth,
   } = useCalendarDays();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlanResponse[]>([]);
@@ -694,6 +695,25 @@ export function OfflinePlansSection() {
           </Box>
         </Box>
       )}
+
+      {/* Пропущенные занятия за прошлый месяц */}
+      <Box sx={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          mb: "16px", px: "20px", py: "12px",
+          borderRadius: "14px",
+          backgroundColor: alpha(brand.terracotta, 0.06),
+          border: `1px solid ${alpha(brand.terracotta, 0.2)}`,
+        }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
+            Пропущено занятий в прошлом месяце
+          </Typography>
+          <Typography sx={{
+            fontFamily: "var(--font-display)", fontStyle: "italic",
+            fontSize: "22px", fontWeight: 400, color: brand.terracotta, lineHeight: 1,
+          }}>
+            {unbookedLastMonth}
+          </Typography>
+        </Box>
 
       {/* Календарь сессий */}
       <Box sx={{ mb: "32px" }}>
