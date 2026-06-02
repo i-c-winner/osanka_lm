@@ -55,9 +55,12 @@ function SessionRow({
   onCancel,
   processing,
 }: SessionRowProps) {
-  const isBooked = bookingId != null;
-  const available = session.capacity - session.booked_count;
-  const isFull = available <= 0 && !isBooked;
+  const isBooked   = bookingId != null;
+  const available  = session.capacity - session.booked_count;
+  const isFull     = available <= 0 && !isBooked;
+  const now        = new Date();
+  const isStarted  = new Date(session.starts_at) <= now;
+  const isFinished = new Date(session.ends_at) <= now;
 
   return (
     <Box
@@ -108,10 +111,14 @@ function SessionRow({
             sx={{
               fontFamily: "var(--font-body)",
               fontSize: "12px",
-              color: isFull ? brand.terracotta : brand.cocoaSoft,
+              color: isStarted ? brand.mute : isFull ? brand.terracotta : brand.cocoaSoft,
             }}
           >
-            {isFull
+            {isFinished
+              ? "Закончилась"
+              : isStarted
+              ? "Уже началась"
+              : isFull
               ? "Мест нет"
               : `Свободно ${available} из ${session.capacity}`}
           </Typography>
@@ -132,6 +139,11 @@ function SessionRow({
         )}
 
         {isBooked ? (
+          isStarted ? (
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute, fontStyle: "italic" }}>
+              Запись подтверждена
+            </Typography>
+          ) : (
           <Button
             variant="outlined"
             size="small"
@@ -161,11 +173,12 @@ function SessionRow({
           >
             {processing ? "..." : "Отменить"}
           </Button>
+          )
         ) : (
           <Button
             variant="contained"
             size="small"
-            disabled={isFull || processing}
+            disabled={isFull || isStarted || isFinished || processing}
             onClick={() => onBook(session.id)}
             startIcon={
               processing ? (
@@ -173,8 +186,8 @@ function SessionRow({
               ) : undefined
             }
             sx={{
-              backgroundColor: isFull ? alpha(brand.mute, 0.15) : brand.cocoa,
-              color: isFull ? brand.mute : brand.ivory,
+              backgroundColor: isFull || isStarted || isFinished ? alpha(brand.mute, 0.15) : brand.cocoa,
+              color: isFull || isStarted || isFinished ? brand.mute : brand.ivory,
               borderRadius: "100px",
               fontFamily: "var(--font-body)",
               fontWeight: 600,
@@ -183,7 +196,7 @@ function SessionRow({
               px: "16px",
               boxShadow: "none",
               "&:hover": {
-                backgroundColor: isFull
+                backgroundColor: isFull || isStarted || isFinished
                   ? alpha(brand.mute, 0.15)
                   : brand.cocoaSoft,
                 boxShadow: "none",
@@ -194,7 +207,7 @@ function SessionRow({
               },
             }}
           >
-            {isFull ? "Мест нет" : "Забронировать"}
+            {isFinished ? "Закончилась" : isStarted ? "Началась" : isFull ? "Мест нет" : "Забронировать"}
           </Button>
         )}
       </Box>
