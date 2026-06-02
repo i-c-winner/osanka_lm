@@ -38,7 +38,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 дней
     ALGORITHM: str = "HS256"
 
-    # CORS
+    # CORS — через переменную окружения можно передать список через запятую
+    # Пример: ALLOWED_ORIGINS=https://myapp.up.railway.app,http://localhost:3000
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
     
     # JWT

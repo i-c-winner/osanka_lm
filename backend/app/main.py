@@ -13,6 +13,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.up\.railway\.app",  # все Railway домены
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
