@@ -314,7 +314,7 @@ export default function BillingPage() {
     setPurchasing(planId);
     setPurchaseError(null);
     try {
-      await subscriptionsApi.create(planId, discount);
+      await subscriptionsApi.create(planId);
       setPurchased((prev) => new Set(prev).add(planId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
