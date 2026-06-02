@@ -23,7 +23,8 @@ import app.models.subscription_plan  # noqa
 import app.models.subscription  # noqa
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Alembic использует синхронный драйвер; async_database_url — для приложения
+config.set_main_option("sqlalchemy.url", settings.sync_database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
