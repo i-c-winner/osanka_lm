@@ -8,6 +8,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    redirect_slashes=False,  # не делать 307 редирект при отсутствии слеша
 )
 
 app.add_middleware(
