@@ -377,8 +377,8 @@ export function SessionsTab() {
         </Button>
       </Box>
 
-      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflow: "hidden" }}>
-        <Table size="small">
+      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <Table size="small" sx={{ minWidth: 560 }}>
           <TableHead>
             <TableRow>
               {COLS.map((h) => <TableCell key={h} sx={HEAD_CELL_SX}>{h}</TableCell>)}

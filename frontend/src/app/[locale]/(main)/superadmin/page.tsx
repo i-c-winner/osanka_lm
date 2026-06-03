@@ -112,8 +112,8 @@ function UsersTab() {
         </Box>
       </Typography>
 
-      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflow: "hidden" }}>
-        <Table size="small">
+      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <Table size="small" sx={{ minWidth: 580 }}>
           <TableHead>
             <TableRow>
               {["Имя", "Telegram", "Телефон", "Роль", "Активен", "Создан"].map((h) => (
@@ -332,8 +332,8 @@ function LocaleTab() {
       </Box>
 
       {/* Таблица */}
-      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflow: "hidden" }}>
-        <Table size="small">
+      <TableContainer sx={{ borderRadius: "14px", border: `1px solid ${alpha(brand.line, 0.6)}`, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <Table size="small" sx={{ minWidth: 400 }}>
           <TableHead>
             <TableRow>
               {["Название", "Адрес", "Активна", ""].map((h) => (
@@ -781,21 +781,25 @@ export default function SuperAdminPage() {
         borderRadius: "22px", backgroundColor: brand.ivory,
         border: `1px solid ${alpha(brand.line, 0.7)}`,
         boxShadow: `0 2px 12px -4px ${alpha(brand.cocoa, 0.07)}`,
-        overflow: "hidden",
       }}>
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
-            px: { xs: "16px", md: "28px" },
+            px: { xs: "8px", md: "28px" },
             borderBottom: `1px solid ${alpha(brand.line, 0.7)}`,
             "& .MuiTabs-indicator": { backgroundColor: brand.terracotta, height: "2px", borderRadius: "2px 2px 0 0" },
             "& .MuiTab-root": {
               fontFamily: "var(--font-body)", fontWeight: 500, fontSize: "13px",
               letterSpacing: "0.04em", color: brand.mute, textTransform: "none",
-              minWidth: 0, px: "4px", mr: "24px", transition: "color 0.15s ease",
+              minWidth: 0, px: { xs: "10px", md: "4px" }, mr: { xs: "4px", md: "24px" },
+              transition: "color 0.15s ease",
             },
             "& .MuiTab-root.Mui-selected": { color: brand.cocoa, fontWeight: 600 },
+            "& .MuiTabs-scrollButtons": { color: brand.cocoa },
           }}
         >
           {TABS.map(({ label }) => <Tab key={label} label={label} disableRipple />)}
