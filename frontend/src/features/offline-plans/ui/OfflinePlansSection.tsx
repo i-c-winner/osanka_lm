@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "@/shared/i18n/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 import { alpha } from "@mui/material/styles";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { brand } from "@/shared/theme";
 import {
-  subscriptionPlansApi,
   subscriptionsApi,
   bookingsApi,
 } from "@/shared/api";
@@ -24,6 +26,7 @@ import { userStorage } from "@/shared/lib/userStorage";
 import { MonthCalendar } from "@/entities/calendar";
 import { useCalendarDays } from "@/features/calendar-days";
 import { DayBookingModal } from "@/features/book-session";
+import { useMySpace } from "@/features/my-space";
 
 // ─── Утилиты ─────────────────────────────────────────────────────────────────
 
@@ -393,72 +396,84 @@ function PlanCard({ plan, onJoin, joining, joined }: PlanCardProps) {
 
 // ─── OfflinePlansSection ──────────────────────────────────────────────────────
 
+// ─── Вспомогательная функция: метка подписки для Select ──────────────────────
+
+function subLabel(
+  sub: SubscriptionResponse,
+  plansById: Record<string, SubscriptionPlanResponse>,
+): string {
+  const plan = plansById[sub.plan_id];
+  const name = plan?.name ?? "Подписка";
+  const from = new Date(sub.started_at).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "short",
+  });
+  const to = sub.expires_at
+    ? new Date(sub.expires_at).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "short",
+      })
+    : "∞";
+  return `${name} · ${from} – ${to}`;
+}
+
+// ─── OfflinePlansSection ──────────────────────────────────────────────────────
+
 export function OfflinePlansSection() {
   const router = useRouter();
+
+  // ── Контекст подписок ──────────────────────────────────────────────────────
+  const {
+    subscriptions,
+    plans: contextPlans,
+    activeSubscription: activeSub,
+    activePlan,
+    setActiveSubscriptionId,
+    loading: ctxLoading,
+    reload: reloadContext,
+  } = useMySpace();
+
+  const plansById = useMemo(
+    () => Object.fromEntries(contextPlans.map((p) => [p.id, p])),
+    [contextPlans],
+  );
+
+  // ── Локальное состояние (только для этого экрана) ──────────────────────────
   const {
     getDayData,
     sessionsByDate,
-    refresh: refreshCalendar,
     optimisticBook,
     optimisticCancel,
     unbookedLastMonth,
   } = useCalendarDays();
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [plans, setPlans] = useState<SubscriptionPlanResponse[]>([]);
-  const [activeSub, setActiveSub] = useState<SubscriptionResponse | null>(null);
-  const [activePlan, setActivePlan] = useState<SubscriptionPlanResponse | null>(
-    null,
-  );
   const [activeBookings, setActiveBookings] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
-  const [purchasedPlanIds, setPurchasedPlanIds] = useState<Set<string>>(
-    new Set(),
-  );
   const [joinError, setJoinError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Считаем активные брони (только загрузка, не дублируем подписки)
+  const loadBookings = useCallback(async () => {
+    setBookingsLoading(true);
     try {
-      const [plansList, subscriptions, myBookings] = await Promise.all([
-        subscriptionPlansApi.listActive(),
-        subscriptionsApi.listMy().catch(() => [] as SubscriptionResponse[]),
-        bookingsApi.listMy().catch(() => [] as BookingResponse[]),
-      ]);
-      setPlans(plansList);
-
-      const active = subscriptions.find((s) => s.status === "active") ?? null;
-      setActiveSub(active);
-      if (active) {
-        const plan = plansList.find((p) => p.id === active.plan_id) ?? null;
-        setActivePlan(plan);
-      }
-
-      // Считаем активные брони (booked = ещё не посещено)
-      const bookedCount = myBookings.filter(
-        (b) => b.status === "booked",
-      ).length;
-      setActiveBookings(bookedCount);
-
-      const activePlanIds = new Set(
-        subscriptions
-          .filter((s) => s.status === "active")
-          .map((s) => s.plan_id),
-      );
-      setPurchasedPlanIds(activePlanIds);
-    } catch {
-      setError("Не удалось загрузить планы");
+      const myBookings = await bookingsApi.listMy().catch(() => [] as BookingResponse[]);
+      setActiveBookings(myBookings.filter((b) => b.status === "booked").length);
     } finally {
-      setLoading(false);
+      setBookingsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadBookings();
+  }, [loadBookings]);
+
+  // Ids уже купленных планов (для подсветки кнопки "Подключено")
+  const purchasedPlanIds = useMemo(
+    () => new Set(subscriptions.filter((s) => s.status === "active").map((s) => s.plan_id)),
+    [subscriptions],
+  );
 
   async function handleJoin(planId: string) {
     setJoining(planId);
@@ -466,12 +481,14 @@ export function OfflinePlansSection() {
     try {
       await subscriptionsApi.create(planId);
       setJoinedIds((prev) => new Set(prev).add(planId));
-      setPurchasedPlanIds((prev) => new Set(prev).add(planId));
 
       const stored = userStorage.get();
       if (stored && !stored.roles.includes("client")) {
         userStorage.set({ ...stored, roles: ["client"] });
       }
+
+      // Обновляем контекст — новая подписка появится в списке
+      await reloadContext();
     } catch (err: unknown) {
       const res = (
         err as { response?: { status?: number; data?: { detail?: string } } }
@@ -485,26 +502,13 @@ export function OfflinePlansSection() {
     }
   }
 
+  const loading = ctxLoading || bookingsLoading;
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: "48px" }}>
         <CircularProgress size={28} sx={{ color: brand.terracotta }} />
       </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Typography
-        sx={{
-          fontFamily: "var(--font-body)",
-          fontSize: "14px",
-          color: brand.terracotta,
-          py: "24px",
-        }}
-      >
-        {error}
-      </Typography>
     );
   }
 
@@ -524,15 +528,59 @@ export function OfflinePlansSection() {
         }}
       >
         Offline{" "}
-        <Box
-          component="em"
-          sx={{ fontStyle: "italic", color: brand.terracottaDeep }}
-        >
+        <Box component="em" sx={{ fontStyle: "italic", color: brand.terracottaDeep }}>
           занятия
         </Box>
       </Typography>
 
-      {/* Статус подписки */}
+      {/* ── Переключатель подписок ─────────────────────────────────────────── */}
+      {subscriptions.length > 0 && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            mb: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: "6px", color: brand.mute }}>
+            <SwapHorizIcon sx={{ fontSize: 16 }} />
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Абонемент
+            </Typography>
+          </Box>
+          <Select
+            value={activeSub?.id ?? ""}
+            onChange={(e) => setActiveSubscriptionId(e.target.value)}
+            size="small"
+            variant="outlined"
+            disabled={subscriptions.length <= 1}
+            sx={{
+              fontFamily: "var(--font-body)",
+              fontSize: "13px",
+              color: brand.cocoa,
+              minWidth: 240,
+              "& .MuiOutlinedInput-notchedOutline": { borderColor: alpha(brand.line, 0.8) },
+              "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: brand.cocoa },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: brand.terracotta },
+              "& .MuiSelect-select": { py: "7px", px: "12px" },
+            }}
+          >
+            {subscriptions.map((sub) => (
+              <MenuItem
+                key={sub.id}
+                value={sub.id}
+                sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}
+              >
+                {subLabel(sub, plansById)}
+              </MenuItem>
+            ))}
+          </Select>
+        </Box>
+      )}
+
+      {/* ── Статус активной подписки ───────────────────────────────────────── */}
       {activeSub && (
         <Box
           sx={{
@@ -549,55 +597,21 @@ export function OfflinePlansSection() {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Box
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                backgroundColor: brand.sage,
-                flexShrink: 0,
-              }}
-            />
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontWeight: 600,
-                fontSize: "13px",
-                color: brand.cocoa,
-              }}
-            >
+            <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: brand.sage, flexShrink: 0 }} />
+            <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", color: brand.cocoa }}>
               {activePlan?.name ?? "Активная подписка"}
             </Typography>
           </Box>
 
           {activePlan && activePlan.sessions_limit != null && (
             <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "13px",
-                  color: brand.cocoaSoft,
-                }}
-              >
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
                 Осталось занятий:
               </Typography>
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-body)",
-                  fontWeight: 700,
-                  fontSize: "13px",
-                  color: brand.cocoa,
-                }}
-              >
-                {activePlan.sessions_limit -
-                  activeSub.sessions_used -
-                  activeBookings}
-                <Box
-                  component="span"
-                  sx={{ fontWeight: 400, color: brand.mute }}
-                >
-                  {" "}
-                  / {activePlan.sessions_limit}
+              <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "13px", color: brand.cocoa }}>
+                {activePlan.sessions_limit - activeSub.sessions_used - activeBookings}
+                <Box component="span" sx={{ fontWeight: 400, color: brand.mute }}>
+                  {" "}/ {activePlan.sessions_limit}
                 </Box>
               </Typography>
             </Box>
@@ -605,27 +619,12 @@ export function OfflinePlansSection() {
 
           {activeSub.expires_at && (
             <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "13px",
-                  color: brand.cocoaSoft,
-                }}
-              >
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
                 Действует до:
               </Typography>
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-body)",
-                  fontWeight: 600,
-                  fontSize: "13px",
-                  color: brand.cocoa,
-                }}
-              >
+              <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", color: brand.cocoa }}>
                 {new Date(activeSub.expires_at).toLocaleDateString("ru-RU", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
+                  day: "numeric", month: "long", year: "numeric",
                 })}
               </Typography>
             </Box>
@@ -634,80 +633,34 @@ export function OfflinePlansSection() {
         </Box>
       )}
 
-      {/* Строка с остатком занятий */}
+      {/* ── Остаток занятий ────────────────────────────────────────────────── */}
       {activePlan && activePlan.sessions_limit != null && activeSub && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mb: "12px",
-            px: "4px",
-          }}
-        >
-          <Typography
-            sx={{
-              fontFamily: "var(--font-body)",
-              fontWeight: 600,
-              fontSize: "11px",
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: brand.mute,
-            }}
-          >
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "12px", px: "4px" }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: brand.mute }}>
             Осталось занятий
           </Typography>
           <Box sx={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-            <Typography
-              sx={{
-                fontFamily: "var(--font-display)",
-                fontStyle: "italic",
-                fontSize: "22px",
-                fontWeight: 400,
-                color: brand.cocoa,
-                lineHeight: 1,
-              }}
-            >
-              {Math.max(
-                0,
-                activePlan.sessions_limit -
-                  activeSub.sessions_used -
-                  activeBookings,
-              )}
+            <Typography sx={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "22px", fontWeight: 400, color: brand.cocoa, lineHeight: 1 }}>
+              {Math.max(0, activePlan.sessions_limit - activeSub.sessions_used - activeBookings)}
             </Typography>
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontSize: "13px",
-                color: brand.mute,
-              }}
-            >
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute }}>
               / {activePlan.sessions_limit}
             </Typography>
           </Box>
         </Box>
       )}
 
-      {/* Пропущенные занятия за прошлый месяц */}
-      <Box sx={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          mb: "16px", px: "20px", py: "12px",
-          borderRadius: "14px",
-          backgroundColor: alpha(brand.terracotta, 0.06),
-          border: `1px solid ${alpha(brand.terracotta, 0.2)}`,
-        }}>
-          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
-            Пропущено занятий в прошлом месяце
-          </Typography>
-          <Typography sx={{
-            fontFamily: "var(--font-display)", fontStyle: "italic",
-            fontSize: "22px", fontWeight: 400, color: brand.terracotta, lineHeight: 1,
-          }}>
-            {unbookedLastMonth}
-          </Typography>
-        </Box>
+      {/* ── Пропущенные занятия за прошлый месяц ──────────────────────────── */}
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "16px", px: "20px", py: "12px", borderRadius: "14px", backgroundColor: alpha(brand.terracotta, 0.06), border: `1px solid ${alpha(brand.terracotta, 0.2)}` }}>
+        <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
+          Пропущено занятий в прошлом месяце
+        </Typography>
+        <Typography sx={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "22px", fontWeight: 400, color: brand.terracotta, lineHeight: 1 }}>
+          {unbookedLastMonth}
+        </Typography>
+      </Box>
 
-      {/* Календарь сессий */}
+      {/* ── Календарь сессий ───────────────────────────────────────────────── */}
       <Box sx={{ mb: "32px" }}>
         <MonthCalendar
           getDayData={getDayData}
