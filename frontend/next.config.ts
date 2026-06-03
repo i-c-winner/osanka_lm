@@ -12,9 +12,15 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // Запросы со слешем — проксируем как есть
+      {
+        source: "/api/v1/:path*/",
+        destination: `${BACKEND_URL}/api/v1/:path*/`,
+      },
+      // Запросы без слеша — добавляем слеш чтобы FastAPI не делал 307
       {
         source: "/api/v1/:path*",
-        destination: `${BACKEND_URL}/api/v1/:path*`,
+        destination: `${BACKEND_URL}/api/v1/:path*/`,
       },
     ];
   },
