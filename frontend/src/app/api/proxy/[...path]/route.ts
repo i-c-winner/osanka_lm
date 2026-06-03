@@ -1,66 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000";
-
-async function fetchWithRedirects(
-  url: string,
-  options: RequestInit,
-  maxRedirects = 5,
-): Promise<Response> {
-  let currentUrl = url;
-  for (let i = 0; i < maxRedirects; i++) {
-    const res = await fetch(currentUrl, { ...options, redirect: "manual" });
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get("location");
-      if (!location) return res;
-      // Если relative URL — делаем абсолютным
-      currentUrl = location.startsWith("http")
-        ? location
-        : new URL(location, BACKEND).toString();
-      // Сохраняем все заголовки включая Authorization
-      continue;
-    }
-    return res;
-  }
-  throw new Error("Too many redirects");
-}
+const BACKEND = (process.env.BACKEND_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 async function handler(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  const { path } = await params;
-  const pathStr = path.join("/");
-  const search = req.nextUrl.search ?? "";
-  const url = `${BACKEND}/api/v1/${pathStr}${search}`;
+  try {
+    const { path } = await params;
+    const pathStr = path.join("/");
+    const search = req.nextUrl.search ?? "";
+    const targetUrl = `${BACKEND}/api/v1/${pathStr}${search}`;
 
-  const headers = new Headers();
-  req.headers.forEach((val, key) => {
-    if (!["host", "connection", "transfer-encoding"].includes(key)) {
-      headers.set(key, val);
+    // Собираем заголовки, исключая hop-by-hop
+    const headers: Record<string, string> = {};
+    req.headers.forEach((val, key) => {
+      const skip = ["host", "connection", "transfer-encoding", "content-length"];
+      if (!skip.includes(key.toLowerCase())) {
+        headers[key] = val;
+      }
+    });
+
+    const isBodyMethod = !["GET", "HEAD"].includes(req.method.toUpperCase());
+    const body = isBodyMethod ? await req.text() : undefined;
+
+    // Делаем до 5 редиректов вручную, сохраняя заголовки
+    let url = targetUrl;
+    let response: Response | null = null;
+    for (let i = 0; i < 5; i++) {
+      response = await fetch(url, {
+        method: req.method,
+        headers,
+        body,
+        redirect: "manual",
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        const loc = response.headers.get("location");
+        if (!loc) break;
+        url = loc.startsWith("http") ? loc : `${BACKEND}${loc}`;
+        continue;
+      }
+      break;
     }
-  });
 
-  const body =
-    ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer();
-
-  const res = await fetchWithRedirects(url, {
-    method: req.method,
-    headers,
-    body,
-  });
-
-  const resHeaders = new Headers();
-  res.headers.forEach((val, key) => {
-    if (!["transfer-encoding", "connection"].includes(key)) {
-      resHeaders.set(key, val);
+    if (!response) {
+      return NextResponse.json({ error: "No response from backend" }, { status: 502 });
     }
-  });
 
-  return new NextResponse(res.body, {
-    status: res.status,
-    headers: resHeaders,
-  });
+    const resHeaders: Record<string, string> = {};
+    response.headers.forEach((val, key) => {
+      const skip = ["transfer-encoding", "connection", "keep-alive"];
+      if (!skip.includes(key.toLowerCase())) {
+        resHeaders[key] = val;
+      }
+    });
+
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: resHeaders,
+    });
+
+  } catch (err: unknown) {
+    console.error("[proxy] error:", err);
+    return NextResponse.json(
+      { error: "Proxy error", detail: String(err) },
+      { status: 502 },
+    );
+  }
 }
 
 export const GET     = handler;
