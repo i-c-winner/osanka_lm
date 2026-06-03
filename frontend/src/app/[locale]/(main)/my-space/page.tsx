@@ -24,6 +24,7 @@ import { userStorage }          from "@/shared/lib/userStorage";
 import { CalendarView }         from "@/entities/calendar";
 import { useCalendarDays }      from "@/features/calendar-days";
 import { OfflinePlansSection }  from "@/features/offline-plans";
+import { MySpaceProvider }      from "@/features/my-space";
 
 // ─── Типы ─────────────────────────────────────────────────────────────────────
 
@@ -285,7 +286,7 @@ function MainContent({ section }: { section: NavKey }) {
 
 // ─── Страница ─────────────────────────────────────────────────────────────────
 
-export default function MySpacePage() {
+function MySpacePageInner() {
   const [activeSection, setActiveSection] = useState<NavKey>("calendar");
 
   return (
@@ -293,23 +294,27 @@ export default function MySpacePage() {
       maxWidth: "1200px", mx: "auto",
       px: { xs: 2, sm: 3, md: 4 }, py: { xs: "24px", md: "48px" },
     }}>
-      {/* Мобильный бургер (скрыт на md+) */}
       <MobileNav active={activeSection} onChange={setActiveSection} />
 
-      {/* Основной layout */}
       <Box sx={{
         display: "flex",
         gap: { md: "48px", lg: "64px" },
         alignItems: "flex-start",
       }}>
-        {/* Десктопный сайдбар (скрыт на xs) */}
         <Aside active={activeSection} onChange={setActiveSection} />
 
-        {/* Контент */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <MainContent section={activeSection} />
         </Box>
       </Box>
     </Box>
+  );
+}
+
+export default function MySpacePage() {
+  return (
+    <MySpaceProvider>
+      <MySpacePageInner />
+    </MySpaceProvider>
   );
 }
