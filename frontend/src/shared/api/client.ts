@@ -20,11 +20,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      const hadToken = !!localStorage.getItem("access_token");
       localStorage.removeItem("access_token");
       sessionStorage.removeItem("user_profile");
       document.cookie = "access_token=; path=/; max-age=0; SameSite=Lax";
-      if (hadToken) {
+      // Не редиректим если уже на странице логина — избегаем петли
+      const onLoginPage = window.location.pathname.includes("/login");
+      if (!onLoginPage) {
         window.location.href = "/login";
       }
     }

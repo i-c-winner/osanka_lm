@@ -6,7 +6,8 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const { path } = await params;
   const pathStr = path.join("/");
   const search = req.nextUrl.search ?? "";
-  const url = `${BACKEND}/api/v1/${pathStr}${search}`;
+  // Добавляем слеш чтобы FastAPI не делал 307 (redirect_slashes=False)
+  const url = `${BACKEND}/api/v1/${pathStr}/${search}`;
 
   const headers = new Headers();
   req.headers.forEach((val, key) => {
