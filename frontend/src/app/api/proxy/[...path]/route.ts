@@ -2,12 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000";
 
-async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+async function fetchWithRedirects(
+  url: string,
+  options: RequestInit,
+  maxRedirects = 5,
+): Promise<Response> {
+  let currentUrl = url;
+  for (let i = 0; i < maxRedirects; i++) {
+    const res = await fetch(currentUrl, { ...options, redirect: "manual" });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) return res;
+      // Если relative URL — делаем абсолютным
+      currentUrl = location.startsWith("http")
+        ? location
+        : new URL(location, BACKEND).toString();
+      // Сохраняем все заголовки включая Authorization
+      continue;
+    }
+    return res;
+  }
+  throw new Error("Too many redirects");
+}
+
+async function handler(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
   const { path } = await params;
   const pathStr = path.join("/");
   const search = req.nextUrl.search ?? "";
-  // Добавляем слеш чтобы FastAPI не делал 307 (redirect_slashes=False)
-  const url = `${BACKEND}/api/v1/${pathStr}/${search}`;
+  const url = `${BACKEND}/api/v1/${pathStr}${search}`;
 
   const headers = new Headers();
   req.headers.forEach((val, key) => {
@@ -16,14 +41,13 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     }
   });
 
-  const body = ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer();
+  const body =
+    ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer();
 
-  // redirect: "follow" — следуем за 307 сами, браузер не видит редиректов
-  const res = await fetch(url, {
+  const res = await fetchWithRedirects(url, {
     method: req.method,
     headers,
     body,
-    redirect: "follow",
   });
 
   const resHeaders = new Headers();
