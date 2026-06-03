@@ -477,17 +477,9 @@ export function OfflinePlansSection() {
         err as { response?: { status?: number; data?: { detail?: string } } }
       )?.response;
       const msg = res?.data?.detail;
-      if (res?.status === 409) {
-        setJoinError(
-          typeof msg === "string"
-            ? msg
-            : "У вас уже есть активная подписка на этот период",
-        );
-      } else {
-        setJoinError(
-          typeof msg === "string" ? msg : "Не удалось подключить план",
-        );
-      }
+      setJoinError(
+        typeof msg === "string" ? msg : "Не удалось подключить план",
+      );
     } finally {
       setJoining(null);
     }

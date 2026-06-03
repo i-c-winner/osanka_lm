@@ -70,20 +70,6 @@ async def create_subscription(
         started_at = now
         expires_at = None
 
-    # Проверяем пересечение с уже активными подписками на этот период
-    overlap_query = select(Subscription).where(
-        Subscription.user_id == current_user.id,
-        Subscription.status == "active",
-        Subscription.started_at < (expires_at if expires_at else started_at),
-        (Subscription.expires_at == None) | (Subscription.expires_at > started_at),
-    )
-    overlap_result = await db.execute(overlap_query)
-    if overlap_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=409,
-            detail="У вас уже есть активная подписка на этот период",
-        )
-
     subscription = Subscription(
         user_id=current_user.id,
         plan_id=plan.id,
