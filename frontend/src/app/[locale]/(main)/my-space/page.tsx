@@ -25,6 +25,7 @@ import { CalendarView }         from "@/entities/calendar";
 import { useCalendarDays }      from "@/features/calendar-days";
 import { OfflinePlansSection }  from "@/features/offline-plans";
 import { MySpaceProvider }      from "@/features/my-space";
+import { useMe }               from "@/features/me/model/useMe";
 
 // ─── Типы ─────────────────────────────────────────────────────────────────────
 
@@ -115,9 +116,11 @@ function LogoutButton() {
 function AsideContent({
   active,
   onChange,
+  displayName,
 }: {
   active: NavKey;
   onChange: (k: NavKey) => void;
+  displayName: string;
 }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: "8px", height: "100%" }}>
@@ -129,7 +132,7 @@ function AsideContent({
           fontSize: "clamp(28px, 2.4vw, 36px)", lineHeight: 1.05, color: brand.cocoa,
         }}>
           Доброе утро,{" "}
-          <Box component="em" sx={{ fontStyle: "italic", color: brand.terracottaDeep }}>Янина</Box>
+          <Box component="em" sx={{ fontStyle: "italic", color: brand.terracottaDeep }}>{displayName}</Box>
         </Typography>
       </Box>
 
@@ -175,7 +178,7 @@ function AsideContent({
 
 // ─── Десктопный Aside ─────────────────────────────────────────────────────────
 
-function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => void }) {
+function Aside({ active, onChange, displayName }: { active: NavKey; onChange: (k: NavKey) => void; displayName: string }) {
   return (
     <Box component="aside" sx={{
       width: { md: "280px", lg: "300px" }, flexShrink: 0,
@@ -185,7 +188,7 @@ function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => 
       height: "calc(100vh - 96px)",
       overflowY: "auto", pb: "24px",
     }}>
-      <AsideContent active={active} onChange={onChange} />
+      <AsideContent active={active} onChange={onChange} displayName={displayName} />
     </Box>
   );
 }
@@ -195,9 +198,11 @@ function Aside({ active, onChange }: { active: NavKey; onChange: (k: NavKey) => 
 function MobileNav({
   active,
   onChange,
+  displayName,
 }: {
   active: NavKey;
   onChange: (k: NavKey) => void;
+  displayName: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -264,7 +269,7 @@ function MobileNav({
           </IconButton>
         </Box>
 
-        <AsideContent active={active} onChange={handleSelect} />
+        <AsideContent active={active} onChange={handleSelect} displayName={displayName} />
       </Drawer>
     </>
   );
@@ -288,20 +293,26 @@ function MainContent({ section }: { section: NavKey }) {
 
 function MySpacePageInner() {
   const [activeSection, setActiveSection] = useState<NavKey>("calendar");
+  const { me } = useMe();
+
+  const displayName =
+    me?.telegram_username
+      ? `@${me.telegram_username}`
+      : me?.first_name ?? me?.telegram_id ?? "";
 
   return (
     <Box sx={{
       maxWidth: "1200px", mx: "auto",
       px: { xs: 2, sm: 3, md: 4 }, py: { xs: "24px", md: "48px" },
     }}>
-      <MobileNav active={activeSection} onChange={setActiveSection} />
+      <MobileNav active={activeSection} onChange={setActiveSection} displayName={displayName} />
 
       <Box sx={{
         display: "flex",
         gap: { md: "48px", lg: "64px" },
         alignItems: "flex-start",
       }}>
-        <Aside active={activeSection} onChange={setActiveSection} />
+        <Aside active={activeSection} onChange={setActiveSection} displayName={displayName} />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <MainContent section={activeSection} />
