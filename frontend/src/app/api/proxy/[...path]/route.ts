@@ -50,7 +50,7 @@ async function handler(
 
     const resHeaders: Record<string, string> = {};
     response.headers.forEach((val, key) => {
-      const skip = ["transfer-encoding", "connection", "keep-alive"];
+      const skip = ["transfer-encoding", "connection", "keep-alive", "content-encoding"];
       if (!skip.includes(key.toLowerCase())) {
         resHeaders[key] = val;
       }
