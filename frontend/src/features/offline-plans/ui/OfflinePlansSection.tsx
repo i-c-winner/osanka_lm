@@ -8,7 +8,7 @@ import { alpha } from "@mui/material/styles";
 import { useTranslations } from "next-intl";
 import { brand } from "@/shared/theme";
 import { subscriptionsApi, bookingsApi } from "@/shared/api";
-import type { BookingResponse } from "@/shared/api";
+import type { BookingResponse, SessionResponse } from "@/shared/api";
 import { userStorage } from "@/shared/lib/userStorage";
 import { MonthCalendar } from "@/entities/calendar";
 import { useCalendarDays } from "@/features/calendar-days";
@@ -40,7 +40,12 @@ export function OfflinePlansSection() {
 
   // Ids купленных планов для подсветки кнопки "Подключено"
   const purchasedPlanIds = useMemo(
-    () => new Set(subscriptions.filter((s) => s.status === "active").map((s) => s.plan_id)),
+    () =>
+      new Set(
+        subscriptions
+          .filter((s) => s.status === "active")
+          .map((s) => s.plan_id),
+      ),
     [subscriptions],
   );
 
@@ -57,19 +62,93 @@ export function OfflinePlansSection() {
 
   // ── Брони ─────────────────────────────────────────────────────────────────
   const [activeBookings, setActiveBookings] = useState(0);
+  const [myBookings, setMyBookings] = useState<BookingResponse[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
   const loadBookings = useCallback(async () => {
     setBookingsLoading(true);
     try {
-      const list = await bookingsApi.listMy().catch(() => [] as BookingResponse[]);
+      const list = await bookingsApi
+        .listMy()
+        .catch(() => [] as BookingResponse[]);
       setActiveBookings(list.filter((b) => b.status === "booked").length);
+      setMyBookings(list);
     } finally {
       setBookingsLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadBookings(); }, [loadBookings]);
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
+
+  // ── Стат-карточки под календарём ──────────────────────────────────────────
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  // Дни до конца подписки
+  const daysRemaining = useMemo(() => {
+    if (!activeSub?.expires_at) return null;
+    const diff = Math.ceil(
+      (new Date(activeSub.expires_at).getTime() - now.getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+    return Math.max(0, diff);
+  }, [activeSub]);
+
+  // Множество session_id пользователя (не отменённых) — обновляется оптимистично
+  const [bookedSessionIds, setBookedSessionIds] = useState<Set<string>>(
+    new Set(),
+  );
+  useEffect(() => {
+    setBookedSessionIds(
+      new Set(
+        myBookings
+          .filter((b) => b.status !== "cancelled")
+          .map((b) => b.session_id),
+      ),
+    );
+  }, [myBookings]);
+
+  // Минуты занятий в этом месяце (только прошедшие — до сегодня включительно)
+  const minutesThisMonth = useMemo(() => {
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString()
+      .slice(0, 10);
+    let total = 0;
+    for (const [date, sessions] of Object.entries(sessionsByDate)) {
+      if (date < monthStart || date > todayStr) continue;
+      for (const s of sessions) {
+        if (!bookedSessionIds.has(s.id)) continue;
+        total +=
+          (new Date(s.ends_at).getTime() - new Date(s.starts_at).getTime()) /
+          60_000;
+      }
+    }
+    return Math.round(total);
+  }, [sessionsByDate, bookedSessionIds, todayStr]);
+
+  // Следующее занятие
+  const nextLesson = useMemo<{
+    session: SessionResponse;
+    date: string;
+  } | null>(() => {
+    let best: { session: SessionResponse; date: string } | null = null;
+    for (const [date, sessions] of Object.entries(sessionsByDate)) {
+      if (date < todayStr) continue;
+      for (const s of sessions) {
+        if (!bookedSessionIds.has(s.id)) continue;
+        if (
+          !best ||
+          date < best.date ||
+          (date === best.date && s.starts_at < best.session.starts_at)
+        ) {
+          best = { session: s, date };
+        }
+      }
+    }
+    return best;
+  }, [sessionsByDate, bookedSessionIds, todayStr]);
 
   // ── Покупка плана ─────────────────────────────────────────────────────────
   const [joining, setJoining] = useState<string | null>(null);
@@ -90,7 +169,9 @@ export function OfflinePlansSection() {
 
       await reloadContext();
     } catch (err: unknown) {
-      const res = (err as { response?: { status?: number; data?: { detail?: string } } })?.response;
+      const res = (
+        err as { response?: { status?: number; data?: { detail?: string } } }
+      )?.response;
       const msg = res?.data?.detail;
       setJoinError(typeof msg === "string" ? msg : t("joinError"));
     } finally {
@@ -115,13 +196,19 @@ export function OfflinePlansSection() {
       </Typography>
       <Typography
         sx={{
-          fontFamily: "var(--font-display)", fontWeight: 400,
-          fontSize: "clamp(28px, 3vw, 40px)", lineHeight: 1.05,
-          color: brand.cocoa, mb: "28px",
+          fontFamily: "var(--font-display)",
+          fontWeight: 400,
+          fontSize: "clamp(28px, 3vw, 40px)",
+          lineHeight: 1.05,
+          color: brand.cocoa,
+          mb: "28px",
         }}
       >
         {t("title")}{" "}
-        <Box component="em" sx={{ fontStyle: "italic", color: brand.terracottaDeep }}>
+        <Box
+          component="em"
+          sx={{ fontStyle: "italic", color: brand.terracottaDeep }}
+        >
           {t("titleItalic")}
         </Box>
       </Typography>
@@ -137,30 +224,66 @@ export function OfflinePlansSection() {
       />
 
       {/* Пропущенные занятия за прошлый месяц */}
-      <Box sx={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        mb: "16px", px: "20px", py: "12px", borderRadius: "14px",
-        backgroundColor: alpha(brand.terracotta, 0.06),
-        border: `1px solid ${alpha(brand.terracotta, 0.2)}`,
-      }}>
-        <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: "16px",
+          px: "20px",
+          py: "12px",
+          borderRadius: "14px",
+          backgroundColor: alpha(brand.terracotta, 0.06),
+          border: `1px solid ${alpha(brand.terracotta, 0.2)}`,
+        }}
+      >
+        <Typography
+          sx={{
+            fontFamily: "var(--font-body)",
+            fontSize: "13px",
+            color: brand.cocoaSoft,
+          }}
+        >
           {t("missedLastMonth")}
         </Typography>
-        <Typography sx={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "22px", fontWeight: 400, color: brand.terracotta, lineHeight: 1 }}>
+        <Typography
+          sx={{
+            fontFamily: "var(--font-display)",
+            fontStyle: "italic",
+            fontSize: "22px",
+            fontWeight: 400,
+            color: brand.terracotta,
+            lineHeight: 1,
+          }}
+        >
           {unbookedLastMonth}
         </Typography>
       </Box>
 
       {/* Ошибка покупки */}
       {joinError && (
-        <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.terracotta, mb: "16px" }}>
+        <Typography
+          sx={{
+            fontFamily: "var(--font-body)",
+            fontSize: "13px",
+            color: brand.terracotta,
+            mb: "16px",
+          }}
+        >
           {joinError}
         </Typography>
       )}
 
       {/* Каталог планов (только если нет активной подписки) */}
       {!activeSub && contextPlans.length > 0 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: "12px", mb: "32px" }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            mb: "32px",
+          }}
+        >
           {contextPlans.map((plan) => (
             <PlanCard
               key={plan.id}
@@ -174,12 +297,249 @@ export function OfflinePlansSection() {
       )}
 
       {/* Календарь сессий */}
-      <Box sx={{ mb: "32px" }}>
+      <Box sx={{ mb: "20px" }}>
         <MonthCalendar
           getDayData={getDayData}
           onDayClick={(dateKey) => setSelectedDate(dateKey)}
         />
       </Box>
+
+      {/* Стат-карточки под календарём */}
+      {activeSub && (
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "1fr 1fr",
+              md: "1fr 1fr 1fr",
+            },
+            gap: "12px",
+            mb: "32px",
+          }}
+        >
+          {/* Подписка */}
+          <Box
+            sx={{
+              px: "20px",
+              py: "16px",
+              borderRadius: "14px",
+              backgroundColor: alpha(brand.sage, 0.07),
+              border: `1px solid ${alpha(brand.sage, 0.25)}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: "var(--font-body)",
+                fontSize: "10px",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: brand.mute,
+                mb: "6px",
+              }}
+            >
+              Подписка
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: "var(--font-body)",
+                fontSize: "13px",
+                color: brand.cocoaSoft,
+                lineHeight: 1.5,
+              }}
+            >
+              {new Date(activeSub.started_at).toLocaleDateString("ru-RU", {
+                day: "numeric",
+                month: "short",
+              })}
+              {" – "}
+              {activeSub.expires_at
+                ? new Date(activeSub.expires_at).toLocaleDateString("ru-RU", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "∞"}
+            </Typography>
+            {daysRemaining !== null && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "4px",
+                  mt: "4px",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontFamily: "var(--font-display)",
+                    fontStyle: "italic",
+                    fontSize: "26px",
+                    fontWeight: 400,
+                    color: brand.sage,
+                    lineHeight: 1,
+                  }}
+                >
+                  {daysRemaining}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "12px",
+                    color: brand.mute,
+                  }}
+                >
+                  {daysRemaining === 1
+                    ? "день"
+                    : daysRemaining < 5
+                      ? "дня"
+                      : "дней"}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Минуты в этом месяце */}
+          <Box
+            sx={{
+              px: "20px",
+              py: "16px",
+              borderRadius: "14px",
+              backgroundColor: alpha(brand.gold, 0.07),
+              border: `1px solid ${alpha(brand.gold, 0.25)}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: "var(--font-body)",
+                fontSize: "10px",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: brand.mute,
+                mb: "6px",
+              }}
+            >
+              В этом месяце вы занимались
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: "var(--font-body)",
+                fontSize: "13px",
+                color: brand.cocoaSoft,
+                lineHeight: 1.5,
+              }}
+            >
+              {new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                1,
+              ).toLocaleDateString("ru-RU", { month: "long" })}
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "4px",
+                mt: "4px",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontFamily: "var(--font-display)",
+                  fontStyle: "italic",
+                  fontSize: "26px",
+                  fontWeight: 400,
+                  color: brand.gold,
+                  lineHeight: 1,
+                }}
+              >
+                {minutesThisMonth}
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "12px",
+                  color: brand.mute,
+                }}
+              >
+                мин
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Следующее занятие */}
+          <Box
+            sx={{
+              px: "20px",
+              py: "16px",
+              borderRadius: "14px",
+              backgroundColor: alpha(brand.terracotta, 0.06),
+              border: `1px solid ${alpha(brand.terracotta, 0.2)}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: "var(--font-body)",
+                fontSize: "10px",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: brand.mute,
+                mb: "6px",
+              }}
+            >
+              Следующее занятие
+            </Typography>
+            {nextLesson ? (
+              <>
+                <Typography
+                  sx={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "13px",
+                    color: brand.cocoaSoft,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {new Date(nextLesson.date).toLocaleDateString("ru-RU", {
+                    day: "numeric",
+                    month: "long",
+                    weekday: "short",
+                  })}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontFamily: "var(--font-display)",
+                    fontStyle: "italic",
+                    fontSize: "26px",
+                    fontWeight: 400,
+                    color: brand.terracotta,
+                    lineHeight: 1,
+                    mt: "4px",
+                  }}
+                >
+                  {new Date(nextLesson.session.starts_at).toLocaleTimeString(
+                    "ru-RU",
+                    { hour: "2-digit", minute: "2-digit" },
+                  )}
+                </Typography>
+              </>
+            ) : (
+              <Typography
+                sx={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "13px",
+                  color: brand.mute,
+                  mt: "4px",
+                }}
+              >
+                Нет записей
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      )}
 
       <DayBookingModal
         open={!!selectedDate}
@@ -188,10 +548,16 @@ export function OfflinePlansSection() {
         onClose={() => setSelectedDate(null)}
         onBooked={(sessionId) => {
           setActiveBookings((prev) => prev + 1);
+          setBookedSessionIds((prev) => new Set(prev).add(sessionId));
           if (selectedDate) optimisticBook(selectedDate, sessionId);
         }}
         onCancelled={(sessionId) => {
           setActiveBookings((prev) => Math.max(0, prev - 1));
+          setBookedSessionIds((prev) => {
+            const next = new Set(prev);
+            next.delete(sessionId);
+            return next;
+          });
           if (selectedDate) optimisticCancel(selectedDate, sessionId);
         }}
       />
