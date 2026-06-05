@@ -196,6 +196,7 @@
     "sessionsOf": "/ {limit}",
     "expiresAt": "Amal qilish muddati:",
     "renewBtn": "Obunani uzaytirish",
+    "noActiveSubscription": "Faol obuna yo'q",
     "sessionsLeftLabel": "Qolgan mashg'ulotlar",
     "missedLastMonth": "O'tgan oyda o'tkazib yuborilgan mashg'ulotlar",
     "chipUnlimited": "Limitsiz",

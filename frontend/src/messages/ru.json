@@ -196,6 +196,7 @@
     "sessionsOf": "/ {limit}",
     "expiresAt": "Действует до:",
     "renewBtn": "Продлить подписку",
+    "noActiveSubscription": "Нет активной подписки",
     "sessionsLeftLabel": "Осталось занятий",
     "missedLastMonth": "Пропущено занятий в прошлом месяце",
     "chipUnlimited": "Безлимит",

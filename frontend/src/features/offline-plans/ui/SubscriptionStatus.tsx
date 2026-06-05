@@ -60,15 +60,15 @@ export function SubscriptionStatus({
 
   return (
     <>
-      {/* Переключатель подписок */}
-      {subscriptions.length > 0 && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: "10px", mb: "20px", flexWrap: "wrap" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: "6px", color: brand.mute }}>
-            <SwapHorizIcon sx={{ fontSize: 16 }} />
-            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              {t("selectorLabel")}
-            </Typography>
-          </Box>
+      {/* Переключатель подписок — всегда виден */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: "10px", mb: "20px", flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: "6px", color: brand.mute }}>
+          <SwapHorizIcon sx={{ fontSize: 16 }} />
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            {t("selectorLabel")}
+          </Typography>
+        </Box>
+        {subscriptions.length > 0 ? (
           <Select
             value={activeSub?.id ?? ""}
             onChange={(e) => onSwitch(e.target.value)}
@@ -92,56 +92,66 @@ export function SubscriptionStatus({
               </MenuItem>
             ))}
           </Select>
-        </Box>
-      )}
+        ) : (
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute }}>
+            {t("noActiveSubscription")}
+          </Typography>
+        )}
+      </Box>
 
-      {/* Статус активной подписки */}
-      {activeSub && (
-        <Box
-          sx={{
-            display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap",
-            mb: "20px", px: "20px", py: "14px", borderRadius: "14px",
-            backgroundColor: alpha(brand.sage, 0.08),
-            border: `1px solid ${alpha(brand.sage, 0.3)}`,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: brand.sage, flexShrink: 0 }} />
-            <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", color: brand.cocoa }}>
-              {activePlan?.name ?? t("statusActivePlan")}
-            </Typography>
-          </Box>
-
-          {activePlan?.sessions_limit != null && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
-                {t("sessionsLeft")}
-              </Typography>
-              <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "13px", color: brand.cocoa }}>
-                {activePlan.sessions_limit - activeSub.sessions_used - activeBookings}
-                <Box component="span" sx={{ fontWeight: 400, color: brand.mute }}>
-                  {" "}{t("sessionsOf", { limit: activePlan.sessions_limit })}
-                </Box>
-              </Typography>
-            </Box>
-          )}
-
-          {activeSub.expires_at && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
-                {t("expiresAt")}
-              </Typography>
+      {/* Статус подписки — всегда виден */}
+      <Box
+        sx={{
+          display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap",
+          mb: "20px", px: "20px", py: "14px", borderRadius: "14px",
+          backgroundColor: activeSub ? alpha(brand.sage, 0.08) : alpha(brand.line, 0.06),
+          border: `1px solid ${activeSub ? alpha(brand.sage, 0.3) : alpha(brand.line, 0.4)}`,
+        }}
+      >
+        {activeSub ? (
+          <>
+            <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: brand.sage, flexShrink: 0 }} />
               <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", color: brand.cocoa }}>
-                {new Date(activeSub.expires_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
+                {activePlan?.name ?? t("statusActivePlan")}
               </Typography>
             </Box>
-          )}
 
-          <Button onClick={() => router.push("/billing")} sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>
-            {t("renewBtn")}
-          </Button>
-        </Box>
-      )}
+            {activePlan?.sessions_limit != null && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
+                  {t("sessionsLeft")}
+                </Typography>
+                <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "13px", color: brand.cocoa }}>
+                  {activePlan.sessions_limit - activeSub.sessions_used - activeBookings}
+                  <Box component="span" sx={{ fontWeight: 400, color: brand.mute }}>
+                    {" "}{t("sessionsOf", { limit: activePlan.sessions_limit })}
+                  </Box>
+                </Typography>
+              </Box>
+            )}
+
+            {activeSub.expires_at && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft }}>
+                  {t("expiresAt")}
+                </Typography>
+                <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "13px", color: brand.cocoa }}>
+                  {new Date(activeSub.expires_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
+                </Typography>
+              </Box>
+            )}
+          </>
+        ) : (
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute }}>
+            {t("noActiveSubscription")}
+          </Typography>
+        )}
+
+        <Button onClick={() => router.push("/billing")} sx={{ fontFamily: "var(--font-body)", fontSize: "13px", ml: "auto" }}>
+          {t("renewBtn")}
+        </Button>
+      </Box>
 
       {/* Строка с остатком занятий */}
       {activePlan?.sessions_limit != null && activeSub && (

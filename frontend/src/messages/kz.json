@@ -196,6 +196,7 @@
     "sessionsOf": "/ {limit}",
     "expiresAt": "Жарамдылық мерзімі:",
     "renewBtn": "Жазылымды ұзарту",
+    "noActiveSubscription": "Белсенді жазылым жоқ",
     "sessionsLeftLabel": "Қалған сабақтар",
     "missedLastMonth": "Өткен айда өткізіп алынған сабақтар",
     "chipUnlimited": "Лимитсіз",
