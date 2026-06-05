@@ -7,14 +7,12 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { alpha } from "@mui/material/styles";
 import { useTranslations } from "next-intl";
 import { brand } from "@/shared/theme";
-import { subscriptionsApi, bookingsApi } from "@/shared/api";
+import { bookingsApi } from "@/shared/api";
 import type { BookingResponse, SessionResponse } from "@/shared/api";
-import { userStorage } from "@/shared/lib/userStorage";
 import { MonthCalendar } from "@/entities/calendar";
 import { useCalendarDays } from "@/features/calendar-days";
 import { DayBookingModal } from "@/features/book-session";
 import { useMySpace } from "@/features/my-space";
-import { PlanCard } from "./PlanCard";
 import { SubscriptionStatus } from "./SubscriptionStatus";
 
 // ─── OfflinePlansSection ──────────────────────────────────────────────────────
@@ -30,7 +28,6 @@ export function OfflinePlansSection() {
     activePlan,
     setActiveSubscriptionId,
     loading: ctxLoading,
-    reload: reloadContext,
   } = useMySpace();
 
   const plansById = useMemo(
@@ -38,16 +35,6 @@ export function OfflinePlansSection() {
     [contextPlans],
   );
 
-  // Ids купленных планов для подсветки кнопки "Подключено"
-  const purchasedPlanIds = useMemo(
-    () =>
-      new Set(
-        subscriptions
-          .filter((s) => s.status === "active")
-          .map((s) => s.plan_id),
-      ),
-    [subscriptions],
-  );
 
   // ── Календарь ─────────────────────────────────────────────────────────────
   const {
@@ -150,35 +137,6 @@ export function OfflinePlansSection() {
     return best;
   }, [sessionsByDate, bookedSessionIds, todayStr]);
 
-  // ── Покупка плана ─────────────────────────────────────────────────────────
-  const [joining, setJoining] = useState<string | null>(null);
-  const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
-  const [joinError, setJoinError] = useState<string | null>(null);
-
-  async function handleJoin(planId: string) {
-    setJoining(planId);
-    setJoinError(null);
-    try {
-      await subscriptionsApi.create(planId);
-      setJoinedIds((prev) => new Set(prev).add(planId));
-
-      const stored = userStorage.get();
-      if (stored && !stored.roles.includes("client")) {
-        userStorage.set({ ...stored, roles: ["client"] });
-      }
-
-      await reloadContext();
-    } catch (err: unknown) {
-      const res = (
-        err as { response?: { status?: number; data?: { detail?: string } } }
-      )?.response;
-      const msg = res?.data?.detail;
-      setJoinError(typeof msg === "string" ? msg : t("joinError"));
-    } finally {
-      setJoining(null);
-    }
-  }
-
   // ── Рендер ────────────────────────────────────────────────────────────────
 
   if (ctxLoading || bookingsLoading) {
@@ -260,42 +218,6 @@ export function OfflinePlansSection() {
         </Typography>
       </Box>
 
-      {/* Ошибка покупки */}
-      {joinError && (
-        <Typography
-          sx={{
-            fontFamily: "var(--font-body)",
-            fontSize: "13px",
-            color: brand.terracotta,
-            mb: "16px",
-          }}
-        >
-          {joinError}
-        </Typography>
-      )}
-
-      {/* Каталог планов (только если нет активной подписки) */}
-      {!activeSub && contextPlans.length > 0 && (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            mb: "32px",
-          }}
-        >
-          {contextPlans.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              onJoin={handleJoin}
-              joining={joining === plan.id}
-              joined={purchasedPlanIds.has(plan.id) || joinedIds.has(plan.id)}
-            />
-          ))}
-        </Box>
-      )}
-
       {/* Календарь сессий */}
       <Box sx={{ mb: "20px" }}>
         <MonthCalendar
@@ -305,241 +227,85 @@ export function OfflinePlansSection() {
       </Box>
 
       {/* Стат-карточки под календарём */}
-      {activeSub && (
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "1fr 1fr",
-              md: "1fr 1fr 1fr",
-            },
-            gap: "12px",
-            mb: "32px",
-          }}
-        >
-          {/* Подписка */}
-          <Box
-            sx={{
-              px: "20px",
-              py: "16px",
-              borderRadius: "14px",
-              backgroundColor: alpha(brand.sage, 0.07),
-              border: `1px solid ${alpha(brand.sage, 0.25)}`,
-            }}
-          >
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontSize: "10px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: brand.mute,
-                mb: "6px",
-              }}
-            >
-              Подписка
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" },
+          gap: "12px",
+          mb: "32px",
+        }}
+      >
+        {/* Подписка */}
+        <Box sx={{ px: "20px", py: "16px", borderRadius: "14px", backgroundColor: alpha(brand.sage, 0.07), border: `1px solid ${alpha(brand.sage, 0.25)}` }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: brand.mute, mb: "6px" }}>
+            Подписка
+          </Typography>
+          {activeSub ? (
+            <>
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft, lineHeight: 1.5 }}>
+                {new Date(activeSub.started_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                {" – "}
+                {activeSub.expires_at
+                  ? new Date(activeSub.expires_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
+                  : "∞"}
+              </Typography>
+              {daysRemaining !== null && (
+                <Box sx={{ display: "flex", alignItems: "baseline", gap: "4px", mt: "4px" }}>
+                  <Typography sx={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "26px", fontWeight: 400, color: brand.sage, lineHeight: 1 }}>
+                    {daysRemaining}
+                  </Typography>
+                  <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute }}>
+                    {daysRemaining === 1 ? "день" : daysRemaining < 5 ? "дня" : "дней"}
+                  </Typography>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute, mt: "4px" }}>
+              Нет подписки
             </Typography>
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontSize: "13px",
-                color: brand.cocoaSoft,
-                lineHeight: 1.5,
-              }}
-            >
-              {new Date(activeSub.started_at).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })}
-              {" – "}
-              {activeSub.expires_at
-                ? new Date(activeSub.expires_at).toLocaleDateString("ru-RU", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : "∞"}
-            </Typography>
-            {daysRemaining !== null && (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "4px",
-                  mt: "4px",
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontFamily: "var(--font-display)",
-                    fontStyle: "italic",
-                    fontSize: "26px",
-                    fontWeight: 400,
-                    color: brand.sage,
-                    lineHeight: 1,
-                  }}
-                >
-                  {daysRemaining}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontFamily: "var(--font-body)",
-                    fontSize: "12px",
-                    color: brand.mute,
-                  }}
-                >
-                  {daysRemaining === 1
-                    ? "день"
-                    : daysRemaining < 5
-                      ? "дня"
-                      : "дней"}
-                </Typography>
-              </Box>
-            )}
-          </Box>
+          )}
+        </Box>
 
-          {/* Минуты в этом месяце */}
-          <Box
-            sx={{
-              px: "20px",
-              py: "16px",
-              borderRadius: "14px",
-              backgroundColor: alpha(brand.gold, 0.07),
-              border: `1px solid ${alpha(brand.gold, 0.25)}`,
-            }}
-          >
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontSize: "10px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: brand.mute,
-                mb: "6px",
-              }}
-            >
-              В этом месяце вы занимались
+        {/* Минуты в этом месяце */}
+        <Box sx={{ px: "20px", py: "16px", borderRadius: "14px", backgroundColor: alpha(brand.gold, 0.07), border: `1px solid ${alpha(brand.gold, 0.25)}` }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: brand.mute, mb: "6px" }}>
+            В этом месяце вы занимались
+          </Typography>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft, lineHeight: 1.5 }}>
+            {new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("ru-RU", { month: "long" })}
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "baseline", gap: "4px", mt: "4px" }}>
+            <Typography sx={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "26px", fontWeight: 400, color: brand.gold, lineHeight: 1 }}>
+              {minutesThisMonth}
             </Typography>
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontSize: "13px",
-                color: brand.cocoaSoft,
-                lineHeight: 1.5,
-              }}
-            >
-              {new Date(
-                now.getFullYear(),
-                now.getMonth(),
-                1,
-              ).toLocaleDateString("ru-RU", { month: "long" })}
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute }}>
+              мин
             </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "4px",
-                mt: "4px",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-display)",
-                  fontStyle: "italic",
-                  fontSize: "26px",
-                  fontWeight: 400,
-                  color: brand.gold,
-                  lineHeight: 1,
-                }}
-              >
-                {minutesThisMonth}
-              </Typography>
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "12px",
-                  color: brand.mute,
-                }}
-              >
-                мин
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Следующее занятие */}
-          <Box
-            sx={{
-              px: "20px",
-              py: "16px",
-              borderRadius: "14px",
-              backgroundColor: alpha(brand.terracotta, 0.06),
-              border: `1px solid ${alpha(brand.terracotta, 0.2)}`,
-            }}
-          >
-            <Typography
-              sx={{
-                fontFamily: "var(--font-body)",
-                fontSize: "10px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: brand.mute,
-                mb: "6px",
-              }}
-            >
-              Следующее занятие
-            </Typography>
-            {nextLesson ? (
-              <>
-                <Typography
-                  sx={{
-                    fontFamily: "var(--font-body)",
-                    fontSize: "13px",
-                    color: brand.cocoaSoft,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {new Date(nextLesson.date).toLocaleDateString("ru-RU", {
-                    day: "numeric",
-                    month: "long",
-                    weekday: "short",
-                  })}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontFamily: "var(--font-display)",
-                    fontStyle: "italic",
-                    fontSize: "26px",
-                    fontWeight: 400,
-                    color: brand.terracotta,
-                    lineHeight: 1,
-                    mt: "4px",
-                  }}
-                >
-                  {new Date(nextLesson.session.starts_at).toLocaleTimeString(
-                    "ru-RU",
-                    { hour: "2-digit", minute: "2-digit" },
-                  )}
-                </Typography>
-              </>
-            ) : (
-              <Typography
-                sx={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "13px",
-                  color: brand.mute,
-                  mt: "4px",
-                }}
-              >
-                Нет записей
-              </Typography>
-            )}
           </Box>
         </Box>
-      )}
+
+        {/* Следующее занятие */}
+        <Box sx={{ px: "20px", py: "16px", borderRadius: "14px", backgroundColor: alpha(brand.terracotta, 0.06), border: `1px solid ${alpha(brand.terracotta, 0.2)}` }}>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: brand.mute, mb: "6px" }}>
+            Следующее занятие
+          </Typography>
+          {nextLesson ? (
+            <>
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.cocoaSoft, lineHeight: 1.5 }}>
+                {new Date(nextLesson.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long", weekday: "short" })}
+              </Typography>
+              <Typography sx={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "26px", fontWeight: 400, color: brand.terracotta, lineHeight: 1, mt: "4px" }}>
+                {new Date(nextLesson.session.starts_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+              </Typography>
+            </>
+          ) : (
+            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px", color: brand.mute, mt: "4px" }}>
+              Нет записей
+            </Typography>
+          )}
+        </Box>
+      </Box>
 
       <DayBookingModal
         open={!!selectedDate}
