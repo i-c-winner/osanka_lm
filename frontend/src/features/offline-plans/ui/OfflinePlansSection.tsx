@@ -22,7 +22,7 @@ export function OfflinePlansSection() {
 
   // ── Контекст подписок ──────────────────────────────────────────────────────
   const {
-    subscriptions,
+    currentSubscriptions,
     plans: contextPlans,
     activeSubscription: activeSub,
     activePlan,
@@ -192,7 +192,7 @@ export function OfflinePlansSection() {
 
       {/* Переключатель и статус подписки */}
       <SubscriptionStatus
-        subscriptions={subscriptions}
+        subscriptions={currentSubscriptions}
         activeSub={activeSub}
         activePlan={activePlan}
         plansById={plansById}
