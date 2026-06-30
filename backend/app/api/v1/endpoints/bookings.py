@@ -99,20 +99,23 @@ async def create_booking(
     if starts_at <= now:
         raise HTTPException(status_code=400, detail="Session has already started")
 
-    # Проверяем что пользователь не забронировал эту сессию ранее
+    # Проверяем что пользователь не забронировал эту сессию по ТЕКУЩЕЙ подписке
+    # (одна сессия может быть забронирована по разным подпискам)
     existing_result = await db.execute(
         select(Booking).where(
             Booking.session_id == session_id,
             Booking.user_id == current_user.id,
+            Booking.subscription_id == subscription.id,
             Booking.status != "cancelled",
         )
     )
     if existing_result.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="You already have an active booking for this session")
+        raise HTTPException(status_code=409, detail="You already have an active booking for this session under this subscription")
 
-    # Проверяем вместимость
+    # Проверяем вместимость: считаем уникальных пользователей
+    # (один пользователь с двумя подписками занимает одно место)
     count_result = await db.execute(
-        select(func.count()).select_from(Booking).where(
+        select(func.count(func.distinct(Booking.user_id))).select_from(Booking).where(
             Booking.session_id == session_id,
             Booking.status != "cancelled",
         )

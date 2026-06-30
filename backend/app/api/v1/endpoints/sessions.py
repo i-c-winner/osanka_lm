@@ -67,8 +67,9 @@ async def _with_booked_counts(sessions: list[Session], db: AsyncSession) -> list
     if not sessions:
         return []
     session_ids = [s.id for s in sessions]
+    # Считаем уникальных пользователей (не бронирования) — физическое место в зале
     counts_result = await db.execute(
-        select(Booking.session_id, func.count(Booking.id).label("cnt"))
+        select(Booking.session_id, func.count(func.distinct(Booking.user_id)).label("cnt"))
         .where(Booking.session_id.in_(session_ids), Booking.status != "cancelled")
         .group_by(Booking.session_id)
     )

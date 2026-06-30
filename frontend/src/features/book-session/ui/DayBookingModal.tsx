@@ -284,7 +284,13 @@ export function DayBookingModal({
       const sessionIds = new Set(sessions.map((s) => s.id));
       const map: Record<string, string> = {};
       for (const b of bookings) {
-        if (sessionIds.has(b.session_id) && b.status === "booked") {
+        if (
+          sessionIds.has(b.session_id) &&
+          b.status === "booked" &&
+          // Учитываем только брони текущей подписки.
+          // Брони без subscription_id (старые) показываем всегда как fallback.
+          (!subscriptionId || !b.subscription_id || b.subscription_id === subscriptionId)
+        ) {
           map[b.session_id] = b.id;
         }
       }
@@ -320,8 +326,10 @@ export function DayBookingModal({
           ?.detail ?? ""
       ).toLowerCase();
       setError(
-        status === 409
-          ? "Вы уже записаны или мест нет"
+        detail.includes("under this subscription")
+          ? "По этой подписке вы уже записаны на это занятие"
+          : status === 409
+          ? "Мест нет"
           : detail.includes("session limit")
           ? "Лимит занятий по подписке исчерпан"
           : detail.includes("no active subscription") || detail.includes("not found or expired")
