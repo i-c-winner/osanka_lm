@@ -7,7 +7,8 @@ import { alpha }   from "@mui/material/styles";
 import { brand }   from "@/shared/theme";
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import type { DayCellMountArg } from "@fullcalendar/core";
+import interactionPlugin from "@fullcalendar/interaction";
+import type { DayCellMountArg, DateClickArg } from "@fullcalendar/core";
 import type { GetDayData } from "@/entities/calendar/model/types";
 import { BAR_COLOR } from "@/entities/calendar/model/barColors";
 
@@ -212,20 +213,23 @@ export function MonthCalendar({ getDayData, onDayClick }: MonthCalendarProps) {
     frame.appendChild(inner);
   }
 
+  function handleDateClick(arg: DateClickArg) {
+    if (!onDayClickRef.current) return;
+    // Игнорируем клики по дням других месяцев
+    if (arg.dayEl.classList.contains("fc-day-other")) return;
+    onDayClickRef.current(toKey(arg.date));
+  }
+
   function renderDayCell(arg: DayCellMountArg) {
     const key     = toKey(arg.date);
-    const isOther = arg.el.closest(".fc-day-other") !== null;
+    // Используем classList напрямую — надёжнее чем closest() при монтировании
+    const isOther = arg.el.classList.contains("fc-day-other");
 
     const frame = arg.el.querySelector(".fc-daygrid-day-frame") as HTMLElement | null;
     if (!frame) return;
 
     // Сохраняем ссылку на ячейку для последующего обновления
     cellsRef.current.set(key, { frame, date: arg.date, isOther });
-
-    if (!isOther && onDayClickRef.current) {
-      frame.style.cursor = "pointer";
-      frame.onclick = () => onDayClickRef.current?.(key);
-    }
 
     fillFrame(frame, arg.date, isOther);
   }
@@ -234,7 +238,7 @@ export function MonthCalendar({ getDayData, onDayClick }: MonthCalendarProps) {
     if (!calRef.current) return;
 
     const cal = new Calendar(calRef.current, {
-      plugins:         [dayGridPlugin],
+      plugins:         [dayGridPlugin, interactionPlugin],
       initialView:     "dayGridMonth",
       initialDate:     new Date(),
       locale:          "ru",
@@ -243,6 +247,7 @@ export function MonthCalendar({ getDayData, onDayClick }: MonthCalendarProps) {
       fixedWeekCount:  false,
       height:          "auto",
       dayCellDidMount: renderDayCell,
+      dateClick:       (arg) => handleDateClick(arg),
     });
 
     cal.render();
