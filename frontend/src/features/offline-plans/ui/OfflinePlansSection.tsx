@@ -43,7 +43,7 @@ export function OfflinePlansSection() {
     optimisticBook,
     optimisticCancel,
     unbookedLastMonth,
-  } = useCalendarDays();
+  } = useCalendarDays(activeSub?.id);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 

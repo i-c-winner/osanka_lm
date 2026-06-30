@@ -33,6 +33,36 @@ function buildDayData(
   return { isDone, bars: [], slots };
 }
 
+/** Фильтруем брони по подписке.
+ * Брони без subscription_id (до миграции) считаются принадлежащими любой подписке.
+ */
+function filterBookedIds(bookings: BookingResponse[], subscriptionId?: string): Set<string> {
+  return new Set(
+    bookings
+      .filter(
+        (b) =>
+          b.status !== "cancelled" &&
+          (!subscriptionId || !b.subscription_id || b.subscription_id === subscriptionId),
+      )
+      .map((b) => b.session_id),
+  );
+}
+
+function computeDayMap(
+  byDate: Record<string, SessionResponse[]>,
+  bookedSessionIds: Set<string>,
+): Record<string, DayData> {
+  const result: Record<string, DayData> = {};
+  for (const [date, daySessions] of Object.entries(byDate)) {
+    const data = buildDayData(daySessions, date, bookedSessionIds);
+    const hasBooking = daySessions.some((s) => bookedSessionIds.has(s.id));
+    if ((data.slots && data.slots.length > 0) || hasBooking) {
+      result[date] = { ...data, hasBooking };
+    }
+  }
+  return result;
+}
+
 // ─── Хук ─────────────────────────────────────────────────────────────────────
 
 interface CalendarDaysState {
@@ -42,24 +72,28 @@ interface CalendarDaysState {
   refresh:             () => void;
   optimisticBook:      (dateKey: string, sessionId: string) => void;
   optimisticCancel:    (dateKey: string, sessionId: string) => void;
-  unbookedLastMonth:   number; // дни прошлого месяца с сессиями без брони
+  unbookedLastMonth:   number;
 }
 
-export function useCalendarDays(): CalendarDaysState {
-  const [dayMap,             setDayMap]             = useState<Record<string, DayData>>({});
-  const [sessionsByDate,     setSessionsByDate]     = useState<Record<string, SessionResponse[]>>({});
-  const [unbookedLastMonth,  setUnbookedLastMonth]  = useState(0);
-  const [loading,            setLoading]            = useState(true);
-  const [tick,           setTick]           = useState(0);
+export function useCalendarDays(subscriptionId?: string): CalendarDaysState {
+  const [dayMap,            setDayMap]            = useState<Record<string, DayData>>({});
+  const [sessionsByDate,    setSessionsByDate]    = useState<Record<string, SessionResponse[]>>({});
+  const [unbookedLastMonth, setUnbookedLastMonth] = useState(0);
+  const [loading,           setLoading]           = useState(true);
+  const [tick,              setTick]              = useState(0);
 
-  // Храним актуальные данные в рефах для оптимистичных обновлений
+  // Сырые данные в рефах — для пересчёта без повторного запроса
   const sessionsByDateRef  = useRef<Record<string, SessionResponse[]>>({});
+  const allBookingsRef     = useRef<BookingResponse[]>([]);
   const bookedSessionIdsRef = useRef<Set<string>>(new Set());
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
+  // Загрузка данных
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+
     Promise.all([
       daysApi.list(),
       sessionsApi.list(),
@@ -71,11 +105,6 @@ export function useCalendarDays(): CalendarDaysState {
         const idToDate: Record<string, string> = {};
         for (const day of days) idToDate[day.id] = day.date;
 
-        // Сессии где пользователь записан (не отменён)
-        const bookedSessionIds = new Set(
-          myBookings.filter((b) => b.status !== "cancelled").map((b) => b.session_id),
-        );
-
         const byDate: Record<string, SessionResponse[]> = {};
         for (const s of sessions) {
           const date = idToDate[s.day_id];
@@ -84,20 +113,15 @@ export function useCalendarDays(): CalendarDaysState {
           byDate[date].push(s);
         }
 
-        const result: Record<string, DayData> = {};
-        for (const [date, daySessions] of Object.entries(byDate)) {
-          const data = buildDayData(daySessions, date, bookedSessionIds);
-          const hasBooking = daySessions.some((s) => bookedSessionIds.has(s.id));
-          if ((data.slots && data.slots.length > 0) || hasBooking) {
-            result[date] = { ...data, hasBooking };
-          }
-        }
+        const bookedSessionIds = filterBookedIds(myBookings, subscriptionId);
 
-        // Обновляем рефы для оптимистичных обновлений
+        // Обновляем рефы
         sessionsByDateRef.current   = byDate;
+        allBookingsRef.current      = myBookings;
         bookedSessionIdsRef.current = bookedSessionIds;
 
-        // Считаем дни прошлого месяца с сессиями без брони пользователя
+        // Пропущенные в прошлом месяце (по всем броням пользователя, без фильтра по подписке)
+        const allBookedIds = filterBookedIds(myBookings);
         const now = new Date();
         const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
         const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
@@ -105,21 +129,29 @@ export function useCalendarDays(): CalendarDaysState {
         for (const [date, daySessions] of Object.entries(byDate)) {
           if (date < prevMonthStart || date > prevMonthEnd) continue;
           const hasActiveSessions = daySessions.some((s) => s.status === "active" || s.status === "completed");
-          const hasUserBooking    = daySessions.some((s) => bookedSessionIds.has(s.id));
+          const hasUserBooking    = daySessions.some((s) => allBookedIds.has(s.id));
           if (hasActiveSessions && !hasUserBooking) unbookedCount++;
         }
         setUnbookedLastMonth(unbookedCount);
 
-        setDayMap(result);
+        setDayMap(computeDayMap(byDate, bookedSessionIds));
         setSessionsByDate(byDate);
       })
-      .catch(() => {/* не блокируем UI при ошибке */})
+      .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [tick]);
+  }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Мгновенно показать маркер брони для сессии без запроса к серверу */
+  // Пересчитываем отображение броней при смене подписки (без нового запроса)
+  useEffect(() => {
+    if (Object.keys(sessionsByDateRef.current).length === 0) return;
+    const bookedSessionIds = filterBookedIds(allBookingsRef.current, subscriptionId);
+    bookedSessionIdsRef.current = bookedSessionIds;
+    setDayMap(computeDayMap(sessionsByDateRef.current, bookedSessionIds));
+  }, [subscriptionId]);
+
+  /** Мгновенно показать маркер брони */
   const optimisticBook = useCallback((dateKey: string, sessionId: string) => {
     bookedSessionIdsRef.current = new Set(bookedSessionIdsRef.current).add(sessionId);
     const daySessions = sessionsByDateRef.current[dateKey];
@@ -128,7 +160,7 @@ export function useCalendarDays(): CalendarDaysState {
     setDayMap((prev) => ({ ...prev, [dateKey]: { ...data, hasBooking: true } }));
   }, []);
 
-  /** Мгновенно убрать маркер брони для сессии без запроса к серверу */
+  /** Мгновенно убрать маркер брони */
   const optimisticCancel = useCallback((dateKey: string, sessionId: string) => {
     const next = new Set(bookedSessionIdsRef.current);
     next.delete(sessionId);
