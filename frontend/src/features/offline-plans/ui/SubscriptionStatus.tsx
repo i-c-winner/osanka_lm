@@ -123,7 +123,7 @@ export function SubscriptionStatus({
                   {t("sessionsLeft")}
                 </Typography>
                 <Typography sx={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "13px", color: brand.cocoa }}>
-                  {activePlan.sessions_limit - activeSub.sessions_used - activeBookings}
+                  {Math.max(0, activePlan.sessions_limit - activeSub.sessions_used - activeBookings)}
                   <Box component="span" sx={{ fontWeight: 400, color: brand.mute }}>
                     {" "}{t("sessionsOf", { limit: activePlan.sessions_limit })}
                   </Box>

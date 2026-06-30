@@ -48,17 +48,29 @@ export function OfflinePlansSection() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // ── Брони ─────────────────────────────────────────────────────────────────
-  const [activeBookings, setActiveBookings] = useState(0);
   const [myBookings, setMyBookings] = useState<BookingResponse[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  // Оптимистичная дельта: +1 при бронировании, -1 при отмене (сбрасывается при reload)
+  const [activeBookingsDelta, setActiveBookingsDelta] = useState(0);
+
+  // Считаем брони текущей подписки.
+  // Брони без subscription_id (до миграции) тоже учитываем как принадлежащие текущей.
+  const activeBookings = useMemo(() => {
+    const base = myBookings.filter(
+      (b) =>
+        b.status === "booked" &&
+        (!b.subscription_id || b.subscription_id === activeSub?.id),
+    ).length;
+    return Math.max(0, base + activeBookingsDelta);
+  }, [myBookings, activeSub?.id, activeBookingsDelta]);
 
   const loadBookings = useCallback(async () => {
     setBookingsLoading(true);
+    setActiveBookingsDelta(0);
     try {
       const list = await bookingsApi
         .listMy()
         .catch(() => [] as BookingResponse[]);
-      setActiveBookings(list.filter((b) => b.status === "booked").length);
       setMyBookings(list);
     } finally {
       setBookingsLoading(false);
@@ -313,12 +325,12 @@ export function OfflinePlansSection() {
         sessions={selectedDate ? (sessionsByDate[selectedDate] ?? []) : []}
         onClose={() => setSelectedDate(null)}
         onBooked={(sessionId) => {
-          setActiveBookings((prev) => prev + 1);
+          setActiveBookingsDelta((prev) => prev + 1);
           setBookedSessionIds((prev) => new Set(prev).add(sessionId));
           if (selectedDate) optimisticBook(selectedDate, sessionId);
         }}
         onCancelled={(sessionId) => {
-          setActiveBookings((prev) => Math.max(0, prev - 1));
+          setActiveBookingsDelta((prev) => prev - 1);
           setBookedSessionIds((prev) => {
             const next = new Set(prev);
             next.delete(sessionId);

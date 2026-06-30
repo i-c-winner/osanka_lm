@@ -82,6 +82,7 @@ export interface BookingResponse {
   id: string;
   session_id: string;
   user_id: string;
+  subscription_id?: string;
   status: BookingStatus;
   booked_at: string;
   cancelled_at?: string;

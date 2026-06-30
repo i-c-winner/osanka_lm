@@ -18,14 +18,16 @@ router = APIRouter()
 
 
 async def _get_active_subscription(user_id, db: AsyncSession):
-    """Возвращает активную подписку пользователя или None."""
+    """Возвращает активную подписку пользователя или None.
+    При нескольких активных подписках возвращает ту, что началась последней.
+    """
     now = datetime.now(timezone.utc)
     result = await db.execute(
         select(Subscription).where(
             Subscription.user_id == user_id,
             Subscription.status == "active",
             (Subscription.expires_at == None) | (Subscription.expires_at > now),
-        ).limit(1)
+        ).order_by(Subscription.started_at.desc()).limit(1)
     )
     return result.scalar_one_or_none()
 
@@ -47,11 +49,13 @@ async def create_booking(
     )
     plan = plan_result.scalar_one()
     if not plan.is_unlimited and plan.sessions_limit is not None:
-        # Считаем активные брони (ещё не посещённые и не отменённые)
+        # Считаем активные брони текущей подписки.
+        # Брони без subscription_id (созданные до миграции) тоже учитываем.
         active_bookings_result = await db.execute(
             select(func.count()).select_from(Booking).where(
                 Booking.user_id == current_user.id,
                 Booking.status == "booked",
+                (Booking.subscription_id == subscription.id) | (Booking.subscription_id == None),
             )
         )
         active_bookings_count = active_bookings_result.scalar()
@@ -103,6 +107,7 @@ async def create_booking(
     booking = Booking(
         session_id=session_id,
         user_id=current_user.id,
+        subscription_id=subscription.id,
         status="booked",
     )
     db.add(booking)
