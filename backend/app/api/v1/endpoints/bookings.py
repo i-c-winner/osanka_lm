@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,13 +37,28 @@ async def _get_active_subscription(user_id, db: AsyncSession):
 @router.post("/", response_model=BookingResponse, status_code=201)
 async def create_booking(
     session_id: UUID,
+    subscription_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("client")),
 ):
-    # Проверяем активную подписку
-    subscription = await _get_active_subscription(current_user.id, db)
-    if not subscription:
-        raise HTTPException(status_code=403, detail="No active subscription")
+    # Определяем подписку: используем переданную или находим активную автоматически
+    if subscription_id is not None:
+        now = datetime.now(timezone.utc)
+        sub_result = await db.execute(
+            select(Subscription).where(
+                Subscription.id == subscription_id,
+                Subscription.user_id == current_user.id,
+                Subscription.status == "active",
+                (Subscription.expires_at == None) | (Subscription.expires_at > now),
+            )
+        )
+        subscription = sub_result.scalar_one_or_none()
+        if not subscription:
+            raise HTTPException(status_code=403, detail="Subscription not found or expired")
+    else:
+        subscription = await _get_active_subscription(current_user.id, db)
+        if not subscription:
+            raise HTTPException(status_code=403, detail="No active subscription")
 
     # Проверяем лимит занятий (если план не безлимитный)
     plan_result = await db.execute(

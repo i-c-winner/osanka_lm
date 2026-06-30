@@ -81,6 +81,13 @@ export function OfflinePlansSection() {
     loadBookings();
   }, [loadBookings]);
 
+  // Остаток занятий по активной подписке (null = безлимит или нет лимита)
+  const sessionsRemaining = useMemo(() => {
+    if (!activeSub || !activePlan) return null;
+    if (activePlan.is_unlimited || activePlan.sessions_limit == null) return null;
+    return Math.max(0, activePlan.sessions_limit - activeSub.sessions_used - activeBookings);
+  }, [activeSub, activePlan, activeBookings]);
+
   // ── Стат-карточки под календарём ──────────────────────────────────────────
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -324,6 +331,8 @@ export function OfflinePlansSection() {
         dateKey={selectedDate}
         sessions={selectedDate ? (sessionsByDate[selectedDate] ?? []) : []}
         onClose={() => setSelectedDate(null)}
+        subscriptionId={activeSub?.id}
+        sessionsRemaining={sessionsRemaining}
         onBooked={(sessionId) => {
           setActiveBookingsDelta((prev) => prev + 1);
           setBookedSessionIds((prev) => new Set(prev).add(sessionId));
