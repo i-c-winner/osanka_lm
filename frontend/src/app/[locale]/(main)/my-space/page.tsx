@@ -24,6 +24,7 @@ import { userStorage } from "@/shared/lib/userStorage";
 import { CalendarView } from "@/entities/calendar";
 import { useCalendarDays } from "@/features/calendar-days";
 import { OfflinePlansSection } from "@/features/offline-plans";
+import { ProgramsSection } from "@/features/programs";
 import { MySpaceProvider } from "@/features/my-space";
 import { useMe } from "@/features/me/model/useMe";
 
@@ -55,7 +56,6 @@ const NAV_ITEMS: NavItem[] = [
     key: "programs",
     label: "Мои программы",
     icon: <FormatListBulletedIcon sx={{ fontSize: 18 }} />,
-    count: 3,
     disabled: false,
   },
   {
@@ -497,6 +497,7 @@ function MainContent({ section }: { section: NavKey }) {
   const { getDayData } = useCalendarDays();
   if (section === "calendar") return <CalendarView getDayData={getDayData} />;
   if (section === "sessions") return <OfflinePlansSection />;
+  if (section === "programs") return <ProgramsSection />;
   return (
     <Box component="main" sx={{ flex: 1, minWidth: 0, pt: "8px" }}>
       <Typography variant="h3" sx={{ mb: "8px" }}>
