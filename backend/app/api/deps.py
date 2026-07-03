@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -6,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_db
+from app.models.online_access import OnlineAccess
 from app.models.permission import Permission
 from app.models.role import Role
 from app.models.role_permission import RolePermission
@@ -73,6 +76,35 @@ def require_role(*role_names: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Required role: {', '.join(role_names)}",
+            )
+        return current_user
+    return dependency
+
+
+def require_online_access():
+    """Dependency: проверяет наличие активного онлайн-доступа у пользователя."""
+    async def dependency(
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ) -> User:
+        roles = await get_user_roles(current_user, db)
+        # Admins bypasses access check
+        if any(r in roles for r in ("superadmin", "admin")):
+            return current_user
+
+        now = datetime.now(timezone.utc)
+        result = await db.execute(
+            select(OnlineAccess).where(
+                OnlineAccess.user_id == current_user.id,
+                OnlineAccess.status == "active",
+                OnlineAccess.started_at <= now,
+                (OnlineAccess.expires_at == None) | (OnlineAccess.expires_at >= now),
+            )
+        )
+        if not result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No active online access",
             )
         return current_user
     return dependency

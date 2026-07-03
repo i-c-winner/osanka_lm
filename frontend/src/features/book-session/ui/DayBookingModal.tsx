@@ -45,6 +45,7 @@ interface SessionRowProps {
   onBook: (sessionId: string) => void;
   onCancel: (bookingId: string, sessionId: string) => void;
   processing: boolean;
+  limitReached?: boolean;
 }
 
 function SessionRow({
@@ -54,6 +55,7 @@ function SessionRow({
   onBook,
   onCancel,
   processing,
+  limitReached = false,
 }: SessionRowProps) {
   const isBooked   = bookingId != null;
   const available  = session.capacity - session.booked_count;
@@ -178,7 +180,7 @@ function SessionRow({
           <Button
             variant="contained"
             size="small"
-            disabled={isFull || isStarted || isFinished || processing}
+            disabled={isFull || isStarted || isFinished || limitReached || processing}
             onClick={() => onBook(session.id)}
             startIcon={
               processing ? (
@@ -186,8 +188,14 @@ function SessionRow({
               ) : undefined
             }
             sx={{
-              backgroundColor: isFull || isStarted || isFinished ? alpha(brand.mute, 0.15) : brand.cocoa,
-              color: isFull || isStarted || isFinished ? brand.mute : brand.ivory,
+              backgroundColor:
+                isFull || isStarted || isFinished || limitReached
+                  ? alpha(brand.mute, 0.15)
+                  : brand.cocoa,
+              color:
+                isFull || isStarted || isFinished || limitReached
+                  ? brand.mute
+                  : brand.ivory,
               borderRadius: "100px",
               fontFamily: "var(--font-body)",
               fontWeight: 600,
@@ -196,9 +204,10 @@ function SessionRow({
               px: "16px",
               boxShadow: "none",
               "&:hover": {
-                backgroundColor: isFull || isStarted || isFinished
-                  ? alpha(brand.mute, 0.15)
-                  : brand.cocoaSoft,
+                backgroundColor:
+                  isFull || isStarted || isFinished || limitReached
+                    ? alpha(brand.mute, 0.15)
+                    : brand.cocoaSoft,
                 boxShadow: "none",
               },
               "&.Mui-disabled": {
@@ -207,7 +216,15 @@ function SessionRow({
               },
             }}
           >
-            {isFinished ? "Закончилась" : isStarted ? "Началась" : isFull ? "Мест нет" : "Забронировать"}
+            {isFinished
+              ? "Закончилась"
+              : isStarted
+              ? "Началась"
+              : isFull
+              ? "Мест нет"
+              : limitReached
+              ? "Лимит исчерпан"
+              : "Забронировать"}
           </Button>
         )}
       </Box>
@@ -224,6 +241,10 @@ interface DayBookingModalProps {
   onClose: () => void;
   onBooked?: (sessionId: string) => void;
   onCancelled?: (sessionId: string) => void;
+  /** ID активной подписки — передаётся в запрос бронирования */
+  subscriptionId?: string;
+  /** Оставшихся занятий по подписке; null = безлимит */
+  sessionsRemaining?: number | null;
 }
 
 export function DayBookingModal({
@@ -233,7 +254,10 @@ export function DayBookingModal({
   onClose,
   onBooked,
   onCancelled,
+  subscriptionId,
+  sessionsRemaining,
 }: DayBookingModalProps) {
+  const limitReached = sessionsRemaining != null && sessionsRemaining <= 0;
   const [processing, setProcessing] = useState<string | null>(null);
   // sessionId → bookingId (активная бронь)
   const [bookingMap, setBookingMap] = useState<Record<string, string>>({});
@@ -260,7 +284,13 @@ export function DayBookingModal({
       const sessionIds = new Set(sessions.map((s) => s.id));
       const map: Record<string, string> = {};
       for (const b of bookings) {
-        if (sessionIds.has(b.session_id) && b.status === "booked") {
+        if (
+          sessionIds.has(b.session_id) &&
+          b.status === "booked" &&
+          // Учитываем только брони текущей подписки.
+          // Брони без subscription_id (старые) показываем всегда как fallback.
+          (!subscriptionId || !b.subscription_id || b.subscription_id === subscriptionId)
+        ) {
           map[b.session_id] = b.id;
         }
       }
@@ -279,7 +309,7 @@ export function DayBookingModal({
     setProcessing(sessionId);
     setError(null);
     try {
-      const booking = await bookingsApi.create(sessionId);
+      const booking = await bookingsApi.create(sessionId, subscriptionId);
       setBookingMap((prev) => ({ ...prev, [sessionId]: booking.id }));
       setSessionList((prev) =>
         prev.map((s) =>
@@ -291,14 +321,26 @@ export function DayBookingModal({
       const status = (
         err as { response?: { status?: number; data?: { detail?: string } } }
       )?.response?.status;
-      const msg = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail;
+      const detail = (
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ?? ""
+      ).toLowerCase();
       setError(
-        status === 409
-          ? "Вы уже записаны или мест нет"
-          : typeof msg === "string"
-            ? msg
-            : "Не удалось забронировать",
+        detail.includes("under this subscription")
+          ? "По этой подписке вы уже записаны на это занятие"
+          : status === 409
+          ? "Мест нет"
+          : detail.includes("session limit")
+          ? "Лимит занятий по подписке исчерпан"
+          : detail.includes("no active subscription") || detail.includes("not found or expired")
+          ? "Нет активной подписки"
+          : detail.includes("session date is outside")
+          ? "Занятие выходит за рамки периода подписки"
+          : detail.includes("session has already started")
+          ? "Занятие уже началось"
+          : detail.includes("not available")
+          ? "Занятие недоступно для записи"
+          : "Не удалось забронировать",
       );
     } finally {
       setProcessing(null);
@@ -447,6 +489,7 @@ export function DayBookingModal({
                   onBook={handleBook}
                   onCancel={handleCancel}
                   processing={processing === session.id}
+                  limitReached={limitReached && !bookingMap[session.id]}
                 />
               ))
             )}

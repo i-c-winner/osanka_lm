@@ -61,19 +61,28 @@ async def mark_attendance(
     )
     db.add(attendance)
 
-    # Если пришёл — списываем занятие с подписки
+    # Если пришёл — списываем занятие с подписки, к которой привязана бронь
     if status == ATTENDED_STATUS:
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc)
+        subscription = None
 
-        sub_result = await db.execute(
-            select(Subscription).where(
-                Subscription.user_id == booking.user_id,
-                Subscription.status == "active",
-                (Subscription.expires_at == None) | (Subscription.expires_at > now),
+        if booking.subscription_id:
+            # Списываем с конкретной подписки из брони
+            sub_result = await db.execute(
+                select(Subscription).where(Subscription.id == booking.subscription_id)
             )
-        )
-        subscription = sub_result.scalar_one_or_none()
+            subscription = sub_result.scalar_one_or_none()
+        else:
+            # Fallback для старых броней без subscription_id
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            sub_result = await db.execute(
+                select(Subscription).where(
+                    Subscription.user_id == booking.user_id,
+                    Subscription.status == "active",
+                    (Subscription.expires_at == None) | (Subscription.expires_at > now),
+                ).order_by(Subscription.started_at.desc()).limit(1)
+            )
+            subscription = sub_result.scalar_one_or_none()
 
         if subscription:
             plan_result = await db.execute(

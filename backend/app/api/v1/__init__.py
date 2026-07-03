@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import attendance, auth, bookings, currency, days, locations, sessions, subscription_plans, subscriptions, users
+from app.api.v1.endpoints import attendance, auth, bookings, currency, days, locations, online_content, sessions, subscription_plans, subscriptions, users
 
 router = APIRouter()
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -13,3 +13,4 @@ router.include_router(attendance.router, prefix="", tags=["attendance"])
 router.include_router(days.router, prefix="/days", tags=["days"])
 router.include_router(locations.router, prefix="/locations", tags=["locations"])
 router.include_router(currency.router, prefix="/currency", tags=["currency"])
+router.include_router(online_content.router, prefix="/online", tags=["online"])

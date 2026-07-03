@@ -22,6 +22,7 @@ class BookingUpdate(BaseModel):
 
 class BookingResponse(BookingBase):
     id: UUID
+    subscription_id: Optional[UUID] = None
     booked_at: datetime
     cancelled_at: Optional[datetime] = None
 

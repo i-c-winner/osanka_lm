@@ -14,6 +14,7 @@ class Booking(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    subscription_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     status = Column(String(64), nullable=False)
     booked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)

@@ -22,5 +22,7 @@ class SubscriptionPlan(Base):
     is_calendar_month = Column(Boolean, default=False, nullable=False)
     is_unlimited = Column(Boolean, default=False, nullable=False)
     freeze_days_limit = Column(Integer, nullable=True)
+    # "offline" — офлайн занятия (бронирование), "online" — онлайн-доступ по времени
+    plan_type = Column(String(32), nullable=False, server_default="offline")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)

@@ -17,6 +17,7 @@ class SubscriptionPlanBase(BaseModel):
     is_calendar_month: bool = False
     is_unlimited: bool = False
     freeze_days_limit: Optional[int] = None
+    plan_type: str = "offline"  # "offline" | "online"
 
 
 class SubscriptionPlanCreate(SubscriptionPlanBase):
@@ -34,6 +35,7 @@ class SubscriptionPlanUpdate(BaseModel):
     is_calendar_month: Optional[bool] = None
     is_unlimited: Optional[bool] = None
     freeze_days_limit: Optional[int] = None
+    plan_type: Optional[str] = None
 
 
 class SubscriptionPlanResponse(SubscriptionPlanBase):

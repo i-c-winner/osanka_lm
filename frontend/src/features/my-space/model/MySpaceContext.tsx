@@ -16,9 +16,11 @@ import type { SubscriptionResponse, SubscriptionPlanResponse } from "@/shared/ap
 interface MySpaceContextValue {
   /** Все подписки пользователя */
   subscriptions: SubscriptionResponse[];
+  /** Только актуальные подписки (status=active И expires_at в будущем или отсутствует) */
+  currentSubscriptions: SubscriptionResponse[];
   /** Все планы (для lookup по plan_id) */
   plans: SubscriptionPlanResponse[];
-  /** Активная подписка (по умолчанию первая из active, иначе первая любая) */
+  /** Активная подписка (по умолчанию первая актуальная) */
   activeSubscription: SubscriptionResponse | null;
   /** План активной подписки */
   activePlan: SubscriptionPlanResponse | null;
@@ -52,11 +54,16 @@ export function MySpaceProvider({ children }: { children: React.ReactNode }) {
       setSubscriptions(subs);
       setPlans(allPlans);
 
-      // По умолчанию — первая активная подписка, иначе первая любая
+      // По умолчанию — первая актуальная подписка (active + не истёкшая)
+      const now = new Date();
       setActiveId((prev) => {
         if (prev && subs.some((s) => s.id === prev)) return prev;
-        const firstActive = subs.find((s) => s.status === "active");
-        return firstActive?.id ?? subs[0]?.id ?? null;
+        const firstCurrent = subs.find(
+          (s) =>
+            s.status === "active" &&
+            (!s.expires_at || new Date(s.expires_at) > now),
+        );
+        return firstCurrent?.id ?? subs[0]?.id ?? null;
       });
     } catch {
       // игнорируем: пользователь без подписок — норма
@@ -74,6 +81,16 @@ export function MySpaceProvider({ children }: { children: React.ReactNode }) {
     [plans],
   );
 
+  /** Актуальные подписки: active-статус и не истёкшие по дате */
+  const currentSubscriptions = useMemo(() => {
+    const now = new Date();
+    return subscriptions.filter(
+      (s) =>
+        s.status === "active" &&
+        (!s.expires_at || new Date(s.expires_at) > now),
+    );
+  }, [subscriptions]);
+
   const activeSubscription = useMemo(
     () => subscriptions.find((s) => s.id === activeId) ?? null,
     [subscriptions, activeId],
@@ -87,6 +104,7 @@ export function MySpaceProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<MySpaceContextValue>(
     () => ({
       subscriptions,
+      currentSubscriptions,
       plans,
       activeSubscription,
       activePlan,
@@ -94,7 +112,7 @@ export function MySpaceProvider({ children }: { children: React.ReactNode }) {
       loading,
       reload: load,
     }),
-    [subscriptions, plans, activeSubscription, activePlan, loading, load],
+    [subscriptions, currentSubscriptions, plans, activeSubscription, activePlan, loading, load],
   );
 
   return (
