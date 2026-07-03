@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_user_roles, require_role
 from app.db.session import get_db
+from app.models.online_access import OnlineAccess
 from app.models.role import Role
 from app.models.subscription import Subscription
 from app.models.subscription_plan import SubscriptionPlan
@@ -87,6 +88,18 @@ async def create_subscription(
 
     await db.flush()
     await db.refresh(subscription)
+
+    # Для онлайн-плана автоматически создаём запись доступа
+    if plan.plan_type == "online":
+        online_access = OnlineAccess(
+            user_id=current_user.id,
+            subscription_id=subscription.id,
+            started_at=started_at,
+            expires_at=expires_at,
+            status="active",
+        )
+        db.add(online_access)
+        await db.flush()
 
     return subscription
 

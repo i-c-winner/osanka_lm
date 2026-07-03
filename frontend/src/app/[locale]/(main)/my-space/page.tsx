@@ -56,7 +56,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Мои программы",
     icon: <FormatListBulletedIcon sx={{ fontSize: 18 }} />,
     count: 3,
-    disabled: true,
+    disabled: false,
   },
   {
     key: "sessions",

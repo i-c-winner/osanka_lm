@@ -9,3 +9,5 @@ export { bookingsApi } from "./endpoints/bookings";
 export { subscriptionPlansApi, subscriptionsApi } from "./endpoints/subscriptions";
 export { currencyApi } from "./endpoints/currency";
 export type { CurrencyInfo } from "./endpoints/currency";
+export { onlineContentApi } from "./endpoints/online";
+export type { OnlineContentResponse, OnlineContentCreate, OnlineContentUpdate } from "./types";

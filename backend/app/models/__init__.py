@@ -11,3 +11,6 @@ from app.models.subscription import Subscription  # noqa
 from app.models.subscription_plan import SubscriptionPlan  # noqa
 from app.models.day import Day  # noqa
 from app.models.attendance import Attendance  # noqa
+from app.models.online_content import OnlineContent  # noqa
+from app.models.online_access import OnlineAccess  # noqa
+from app.models.content_plan import ContentPlan  # noqa

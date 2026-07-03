@@ -27,32 +27,34 @@ function fmtPrice(price: number) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "KZT", maximumFractionDigits: 0 }).format(price);
 }
 
-type FormState = SubscriptionPlanCreate;
+type OnlinePlanForm = {
+  code:              string;
+  name:              string;
+  description:       string;
+  price:             number;
+  duration_days:     number;
+  is_calendar_month: boolean;
+  is_active:         boolean;
+};
 
-const EMPTY_FORM: FormState = {
+const EMPTY_FORM: OnlinePlanForm = {
   code:              "",
   name:              "",
   description:       "",
   price:             0,
   duration_days:     30,
-  sessions_limit:    undefined,
-  is_unlimited:      false,
   is_calendar_month: false,
-  freeze_days_limit: undefined,
   is_active:         true,
 };
 
-function planToForm(plan: SubscriptionPlanResponse): FormState {
+function planToForm(plan: SubscriptionPlanResponse): OnlinePlanForm {
   return {
     code:              plan.code,
     name:              plan.name,
     description:       plan.description ?? "",
     price:             plan.price,
     duration_days:     plan.duration_days,
-    sessions_limit:    plan.sessions_limit,
-    is_unlimited:      plan.is_unlimited,
     is_calendar_month: plan.is_calendar_month,
-    freeze_days_limit: plan.freeze_days_limit,
     is_active:         plan.is_active,
   };
 }
@@ -60,15 +62,15 @@ function planToForm(plan: SubscriptionPlanResponse): FormState {
 // ─── PlanFormModal ────────────────────────────────────────────────────────────
 
 interface PlanFormModalProps {
-  open:        boolean;
-  editPlan?:   SubscriptionPlanResponse | null;
-  onClose:     () => void;
-  onSaved:     (plan: SubscriptionPlanResponse) => void;
+  open:      boolean;
+  editPlan?: SubscriptionPlanResponse | null;
+  onClose:   () => void;
+  onSaved:   (plan: SubscriptionPlanResponse) => void;
 }
 
-function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps) {
+function OnlinePlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps) {
   const isEdit = !!editPlan;
-  const [form,   setForm]   = useState<FormState>(EMPTY_FORM);
+  const [form,   setForm]   = useState<OnlinePlanForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState<string | null>(null);
 
@@ -79,7 +81,7 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
     }
   }, [open, editPlan]);
 
-  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+  function set<K extends keyof OnlinePlanForm>(key: K, value: OnlinePlanForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -90,11 +92,14 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
     try {
       const base = {
         ...form,
-        price:             Number(form.price),
-        duration_days:     Number(form.duration_days),
-        sessions_limit:    form.is_unlimited ? undefined : (form.sessions_limit ? Number(form.sessions_limit) : undefined),
-        freeze_days_limit: form.freeze_days_limit ? Number(form.freeze_days_limit) : undefined,
-        description:       form.description || undefined,
+        plan_type:     "online" as const,
+        price:         Number(form.price),
+        duration_days: Number(form.duration_days),
+        description:   form.description || undefined,
+        // online plans don't use sessions or freeze
+        sessions_limit:    undefined,
+        freeze_days_limit: undefined,
+        is_unlimited:      true,
       };
 
       const result = isEdit
@@ -120,7 +125,7 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
           sx={{
             position: "absolute", top: "50%", left: "50%",
             transform: "translate(-50%, -50%)",
-            width: { xs: "calc(100vw - 32px)", sm: 520 },
+            width: { xs: "calc(100vw - 32px)", sm: 480 },
             maxHeight: "90vh", overflowY: "auto",
             backgroundColor: brand.ivory,
             borderRadius: "20px",
@@ -131,9 +136,14 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
         >
           {/* Шапка */}
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "20px", fontWeight: 400, color: brand.cocoa }}>
-              {isEdit ? "Редактировать план" : "Новый план"}
-            </Typography>
+            <Box>
+              <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "20px", fontWeight: 400, color: brand.cocoa }}>
+                {isEdit ? "Редактировать" : "Новый онлайн-план"}
+              </Typography>
+              <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "12px", color: brand.mute, mt: "2px" }}>
+                Даёт доступ к онлайн-занятиям на указанный срок
+              </Typography>
+            </Box>
             <IconButton size="small" onClick={onClose} sx={{ color: brand.cocoaSoft }}>
               <CloseIcon sx={{ fontSize: 20 }} />
             </IconButton>
@@ -153,7 +163,7 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
                 value={form.code}
                 onChange={(e) => set("code", e.target.value.toUpperCase())}
                 size="small" disabled={saving}
-                sx={{ width: 140, flexShrink: 0 }}
+                sx={{ width: 130, flexShrink: 0 }}
                 inputProps={{ style: { fontFamily: "monospace" } }}
               />
             </Box>
@@ -183,31 +193,7 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
               />
             </Box>
 
-            <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <TextField
-                label="Лимит занятий" type="number"
-                value={form.sessions_limit ?? ""}
-                onChange={(e) => set("sessions_limit", e.target.value ? Number(e.target.value) : undefined)}
-                size="small"
-                disabled={saving || form.is_unlimited}
-                sx={{ flex: 1, minWidth: 140 }}
-                inputProps={{ min: 1 }}
-              />
-              <TextField
-                label="Дней заморозки" type="number"
-                value={form.freeze_days_limit ?? ""}
-                onChange={(e) => set("freeze_days_limit", e.target.value ? Number(e.target.value) : undefined)}
-                size="small" disabled={saving}
-                sx={{ flex: 1, minWidth: 140 }}
-                inputProps={{ min: 0 }}
-              />
-            </Box>
-
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              <FormControlLabel
-                control={<Checkbox checked={!!form.is_unlimited} onChange={(e) => set("is_unlimited", e.target.checked)} size="small" disabled={saving} />}
-                label={<Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>Безлимит</Typography>}
-              />
               <FormControlLabel
                 control={<Checkbox checked={!!form.is_calendar_month} onChange={(e) => set("is_calendar_month", e.target.checked)} size="small" disabled={saving} />}
                 label={<Typography sx={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>Календарный месяц</Typography>}
@@ -245,16 +231,16 @@ function PlanFormModal({ open, editPlan, onClose, onSaved }: PlanFormModalProps)
   );
 }
 
-// ─── PlanCard ─────────────────────────────────────────────────────────────────
+// ─── OnlinePlanCard ───────────────────────────────────────────────────────────
 
-interface PlanCardProps {
+interface OnlinePlanCardProps {
   plan:     SubscriptionPlanResponse;
   onToggle: (plan: SubscriptionPlanResponse) => void;
   onEdit:   (plan: SubscriptionPlanResponse) => void;
   toggling: boolean;
 }
 
-function PlanCard({ plan, onToggle, onEdit, toggling }: PlanCardProps) {
+function OnlinePlanCard({ plan, onToggle, onEdit, toggling }: OnlinePlanCardProps) {
   return (
     <Box sx={{
       borderRadius: "14px",
@@ -275,9 +261,11 @@ function PlanCard({ plan, onToggle, onEdit, toggling }: PlanCardProps) {
             <Typography sx={{ fontFamily: "monospace", fontSize: "11px", color: brand.mute, backgroundColor: alpha(brand.line, 0.7), px: "6px", py: "1px", borderRadius: "4px" }}>
               {plan.code}
             </Typography>
-            {plan.is_unlimited && (
-              <Chip label="Безлимит" size="small" sx={{ height: 20, fontFamily: "var(--font-body)", fontSize: "10px", backgroundColor: alpha(brand.sage, 0.15), color: brand.sage }} />
-            )}
+            <Chip
+              label="Онлайн"
+              size="small"
+              sx={{ height: 20, fontFamily: "var(--font-body)", fontSize: "10px", backgroundColor: alpha(brand.terracotta, 0.12), color: brand.terracottaDeep }}
+            />
             {plan.is_calendar_month && (
               <Chip label="Кал. месяц" size="small" sx={{ height: 20, fontFamily: "var(--font-body)", fontSize: "10px", backgroundColor: alpha(brand.gold, 0.15), color: brand.gold }} />
             )}
@@ -329,34 +317,22 @@ function PlanCard({ plan, onToggle, onEdit, toggling }: PlanCardProps) {
             {plan.duration_days} дн.
           </Typography>
         </Box>
-        {!plan.is_unlimited && plan.sessions_limit != null && (
-          <Box>
-            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: brand.mute, mb: "2px" }}>
-              Занятий
-            </Typography>
-            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "15px", fontWeight: 600, color: brand.cocoa }}>
-              {plan.sessions_limit}
-            </Typography>
-          </Box>
-        )}
-        {plan.freeze_days_limit != null && (
-          <Box>
-            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: brand.mute, mb: "2px" }}>
-              Заморозка
-            </Typography>
-            <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "15px", fontWeight: 600, color: brand.cocoa }}>
-              {plan.freeze_days_limit} дн.
-            </Typography>
-          </Box>
-        )}
+        <Box>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: brand.mute, mb: "2px" }}>
+            Доступ
+          </Typography>
+          <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "15px", fontWeight: 600, color: brand.cocoa }}>
+            Неограничен
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
 }
 
-// ─── OfflinePlansTab ──────────────────────────────────────────────────────────
+// ─── OnlinePlansTab ───────────────────────────────────────────────────────────
 
-export function OfflinePlansTab() {
+export function OnlinePlansTab() {
   const [plans,    setPlans]    = useState<SubscriptionPlanResponse[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -367,9 +343,10 @@ export function OfflinePlansTab() {
     setLoading(true);
     try {
       const all = await subscriptionPlansApi.listAll();
-      setPlans(all.filter((p) => !p.plan_type || p.plan_type === "offline"));
+      setPlans(all.filter((p) => p.plan_type === "online"));
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -389,6 +366,7 @@ export function OfflinePlansTab() {
   }
 
   function handleSaved(plan: SubscriptionPlanResponse) {
+    if (plan.plan_type !== "online") return;
     setPlans((prev) => {
       const idx = prev.findIndex((p) => p.id === plan.id);
       return idx >= 0
@@ -403,7 +381,7 @@ export function OfflinePlansTab() {
   const renderCards = (list: SubscriptionPlanResponse[]) => (
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: "12px" }}>
       {list.map((plan) => (
-        <PlanCard
+        <OnlinePlanCard
           key={plan.id}
           plan={plan}
           onToggle={handleToggle}
@@ -419,7 +397,7 @@ export function OfflinePlansTab() {
       {/* Заголовок + кнопка */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "24px", flexWrap: "wrap", gap: "12px" }}>
         <Typography sx={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: brand.cocoa }}>
-          Планы офлайн{" "}
+          Планы онлайн{" "}
           <Box component="span" sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute, fontWeight: 400 }}>
             ({plans.length})
           </Box>
@@ -446,7 +424,7 @@ export function OfflinePlansTab() {
       ) : plans.length === 0 ? (
         <Box sx={{ textAlign: "center", py: "48px", border: `1px dashed ${alpha(brand.line, 0.8)}`, borderRadius: "14px" }}>
           <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "14px", color: brand.mute }}>
-            Нет планов. Создайте первый.
+            Нет онлайн-планов. Создайте первый.
           </Typography>
         </Box>
       ) : (
@@ -470,7 +448,7 @@ export function OfflinePlansTab() {
         </Box>
       )}
 
-      <PlanFormModal
+      <OnlinePlanFormModal
         open={modal}
         editPlan={editPlan}
         onClose={closeModal}

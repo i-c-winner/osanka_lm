@@ -102,6 +102,7 @@ export interface SubscriptionPlanResponse {
   duration_days: number;
   freeze_days_limit?: number;
   is_active: boolean;
+  plan_type: string;  // "offline" | "online"
   created_at: string;
   updated_at?: string;
 }
@@ -117,6 +118,7 @@ export interface SubscriptionPlanCreate {
   duration_days: number;
   freeze_days_limit?: number;
   is_active?: boolean;
+  plan_type?: string;
 }
 
 export interface SubscriptionPlanUpdate {
@@ -130,6 +132,7 @@ export interface SubscriptionPlanUpdate {
   duration_days?: number;
   freeze_days_limit?: number;
   is_active?: boolean;
+  plan_type?: string;
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
@@ -192,4 +195,48 @@ export interface DayCreate {
   status: string;
   location_id?: string;
   notes?: string;
+}
+
+// ─── OnlineContent ────────────────────────────────────────────────────────────
+
+export interface OnlineContentResponse {
+  id: string;
+  title: string;
+  description?: string;
+  type: string;           // "live" | "recorded"
+  stream_url?: string;
+  thumbnail_url?: string;
+  duration_minutes?: number;
+  trainer_id?: string;
+  status: string;         // "active" | "archived"
+  is_free: boolean;
+  plan_ids: string[];
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface OnlineContentCreate {
+  title: string;
+  description?: string;
+  type?: string;
+  stream_url?: string;
+  thumbnail_url?: string;
+  duration_minutes?: number;
+  trainer_id?: string;
+  status?: string;
+  is_free?: boolean;
+  plan_ids?: string[];
+}
+
+export interface OnlineContentUpdate {
+  title?: string;
+  description?: string;
+  type?: string;
+  stream_url?: string;
+  thumbnail_url?: string;
+  duration_minutes?: number;
+  trainer_id?: string;
+  status?: string;
+  is_free?: boolean;
+  plan_ids?: string[];
 }

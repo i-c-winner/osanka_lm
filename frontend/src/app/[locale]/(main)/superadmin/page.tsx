@@ -34,6 +34,8 @@ import { MONTH_RU, DOW_RU, toISO, buildGrid } from "@/shared/lib/calendar";
 import { MonthCalendar } from "@/entities/calendar";
 import { useAdminCalendarDays, DaySessionsModal } from "@/features/superadmin-calendar";
 import { OfflinePlansTab } from "@/features/offline-plans";
+import { OnlinePlansTab } from "@/features/online-plans";
+import { OnlineContentTab } from "@/features/online-content";
 
 // ─── Таблица пользователей ────────────────────────────────────────────────────
 
@@ -739,6 +741,8 @@ const TABS = [
   { label: "Сессии",          component: <SessionsTab />      },
   { label: "Дни",             component: <DaysTab />          },
   { label: "Планы офлайн",    component: <OfflinePlansTab />  },
+  { label: "Планы онлайн",   component: <OnlinePlansTab />   },
+  { label: "Контент онлайн", component: <OnlineContentTab /> },
   { label: "Календарь",       component: <CalendarTab />      },
   { label: "Dashboards",      component: <DashboardsTab />    },
 ];
